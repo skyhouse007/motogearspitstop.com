@@ -12,7 +12,7 @@ const getStoredToken = () => {
 };
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://motogearspitstop.onrender.com/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://motogearspitstop-com.onrender.com/api',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' }
 });

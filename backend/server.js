@@ -39,6 +39,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'https://motogearspitstop.onrender.com',
+  'https://motogearspitstop-com.onrender.com',
 ].map(normalizeOrigin).filter(Boolean);
 
 app.use(cors({
