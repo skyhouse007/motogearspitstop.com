@@ -38,7 +38,11 @@ api.interceptors.response.use(
       requestUrl.includes('/auth/register') ||
       requestUrl.includes('/auth/me');
 
-    if (err.response?.status === 401 && !isAuthRequest) {
+    const isCheckoutRequest =
+      requestUrl.includes('/payment/') ||
+      (requestUrl.includes('/orders') && String(err.config?.method || '').toLowerCase() === 'post');
+
+    if (err.response?.status === 401 && !isAuthRequest && !isCheckoutRequest) {
       window.location.href = '/';
     }
     return Promise.reject(err);

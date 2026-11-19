@@ -34,7 +34,7 @@ const Cart = () => {
 
   const itemsTotal = getCartTotal();
   const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
-  const pricing = calculateOrderPricing(itemsTotal, { firstPurchaseEligible });
+  const pricing = calculateOrderPricing(itemsTotal, { firstPurchaseEligible, itemCount });
 
   const addOnProducts = useMemo(() => {
     const cartIds = new Set(items.map((item) => String(getItemId(item))));
@@ -231,7 +231,7 @@ const Cart = () => {
                 </div>
                 <div className="flex justify-between gap-4">
                   <span>Delivery charge</span>
-                  <span>{pricing.deliveryCharge === 0 ? 'FREE' : formatINR(pricing.deliveryCharge)}</span>
+                  <span>{formatINR(pricing.deliveryCharge)}</span>
                 </div>
                 {firstPurchaseEligible && pricing.firstPurchaseDiscount > 0 && (
                   <div className="flex justify-between gap-4 text-green-700">

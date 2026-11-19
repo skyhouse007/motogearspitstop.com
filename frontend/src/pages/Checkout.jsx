@@ -388,24 +388,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check, CreditCard, Banknote } from 'lucide-react';
+import { Check } from 'lucide-react';
 import useCartStore from '@/store/cartStore';
 import useAuthStore from '@/store/authStore';
 import useOrderStore from '@/store/orderStore';
 import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
-import AuthModal from '@/components/AuthModal';
 import { FIRST_PURCHASE_PROMO } from '@/config/promotions';
-import {
-  calculateOrderPricing,
-  COD_ADVANCE_PERCENTAGE,
-  DELIVERY_CHARGE,
-  FREE_DELIVERY_MINIMUM,
-} from '@/utils/orderPricing';
+import { calculateOrderPricing, COD_ADVANCE_PERCENTAGE } from '@/utils/orderPricing';
 import { getProductImage, handleProductImageError } from '@/utils/imageUtils';
 import IndianPhoneInput from '@/components/IndianPhoneInput';
 import { toIndianLocalDigits } from '@/utils/phoneUtils';
 import { formatUserPhone } from '@/utils/userDisplay';
+import { lookupPincode, normalizePincodeDigits } from '@/utils/pincodeUtils';
 import { trackBeginCheckout } from '@/utils/analytics';
 import {
   createMetaEventId,
@@ -447,7 +442,7 @@ const loadRazorpayScript = () => {
 };
 
 const Checkout = () => {
-  const { items, clearCart, syncCartToBackend } = useCartStore();
+  const { items, clearCart } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
   const {
     createOrder,
@@ -459,10 +454,11 @@ const Checkout = () => {
   const { toast } = useToast();
 
   const [step, setStep] = useState(1);
-  const [showAuth, setShowAuth] = useState(false);
   const [loading, setLoading] = useState(false);
   const [firstPurchaseEligible, setFirstPurchaseEligible] = useState(false);
+  const [pincodeLookupLoading, setPincodeLookupLoading] = useState(false);
   const checkoutTracked = useRef(false);
+  const lastPincodeLookup = useRef('');
   const [formData, setFormData] = useState({
     fullName: user?.name || '',
     phone: toIndianLocalDigits(user?.phone || ''),
@@ -505,19 +501,21 @@ const Checkout = () => {
   }, [isAuthenticated, fetchFirstPurchaseEligibility]);
 
   const itemsTotal = getItemsTotal(items);
-  const pricing = calculateOrderPricing(itemsTotal, { firstPurchaseEligible });
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const pricing = calculateOrderPricing(itemsTotal, { firstPurchaseEligible, itemCount });
   const {
     deliveryCharge,
     firstPurchaseDiscount,
     total,
   } = pricing;
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const codAdvanceAmount = Math.round(total * (COD_ADVANCE_PERCENTAGE / 100));
+  const codAdvanceAmount = total > 0
+    ? Math.max(Math.round(total * (COD_ADVANCE_PERCENTAGE / 100)), 1)
+    : 0;
   const codLeftoverAmount = Math.max(total - codAdvanceAmount, 0);
   const paymentAmount = formData.paymentMethod === 'cod' ? codAdvanceAmount : total;
 
   useEffect(() => {
-    if (!isAuthenticated || items.length === 0 || checkoutTracked.current) return;
+    if (items.length === 0 || checkoutTracked.current) return;
     checkoutTracked.current = true;
     trackBeginCheckout(
       items.map((item) => ({
@@ -527,38 +525,53 @@ const Checkout = () => {
       })),
       total,
     );
-  }, [isAuthenticated, items, total]);
+  }, [items, total]);
+
+  useEffect(() => {
+    const pin = normalizePincodeDigits(formData.pincode);
+    if (pin.length !== 6) {
+      setPincodeLookupLoading(false);
+      lastPincodeLookup.current = '';
+      return;
+    }
+
+    if (pin === lastPincodeLookup.current) return;
+    lastPincodeLookup.current = pin;
+
+    let cancelled = false;
+
+    const runLookup = async () => {
+      setPincodeLookupLoading(true);
+      const result = await lookupPincode(pin);
+      if (cancelled) return;
+
+      setPincodeLookupLoading(false);
+
+      if (result?.success) {
+        setFormData((current) => ({
+          ...current,
+          city: result.city || current.city,
+          state: result.state || current.state,
+        }));
+      } else {
+        toast({
+          title: 'Pincode not found',
+          description: 'Could not find city and state for this pincode. Please enter them manually.',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    runLookup();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.pincode, toast]);
 
   if (items.length === 0) {
     navigate('/cart');
     return null;
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <>
-        <div className="min-h-screen bg-white py-6 flex flex-col items-center justify-center gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">Login to continue checkout</h2>
-          <p className="text-gray-500">You need to be logged in to place an order</p>
-          <button
-            onClick={() => setShowAuth(true)}
-            className="bg-[#e63946] text-white px-8 py-3 rounded-lg font-bold hover:bg-[#d62839] transition"
-          >
-            Login / Sign Up
-          </button>
-        </div>
-        <AuthModal
-          isOpen={showAuth}
-          onClose={() => setShowAuth(false)}
-          onSuccess={async () => {
-            await syncCartToBackend();
-            const result = await fetchFirstPurchaseEligibility();
-            setFirstPurchaseEligible(result.eligible);
-            setShowAuth(false);
-          }}
-        />
-      </>
-    );
   }
 
   const handleInputChange = (e) => {
@@ -579,6 +592,21 @@ const Checkout = () => {
       });
       return false;
     }
+    if (normalizePincodeDigits(pincode).length !== 6) {
+      toast({
+        title: 'Invalid pincode',
+        description: 'Please enter a valid 6-digit pincode',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    if (pincodeLookupLoading) {
+      toast({
+        title: 'Please wait',
+        description: 'Fetching city and state for your pincode…',
+      });
+      return false;
+    }
     return true;
   };
 
@@ -593,12 +621,28 @@ const Checkout = () => {
       return;
     }
 
-    const { success, keyId, order: rzpOrder } = await createRazorpayOrder(paymentAmount);
-    if (!success) {
-      toast({ title: 'Payment Error', description: 'Could not initiate payment', variant: 'destructive' });
+    if (!Number.isFinite(paymentAmount) || paymentAmount < 1) {
+      toast({
+        title: 'Payment Error',
+        description: 'Order total is invalid. Please check your cart and try again.',
+        variant: 'destructive',
+      });
       setLoading(false);
       return;
     }
+
+    const paymentInit = await createRazorpayOrder(paymentAmount);
+    if (!paymentInit.success) {
+      toast({
+        title: 'Payment Error',
+        description: paymentInit.message || 'Could not initiate payment',
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
+
+    const { keyId, order: rzpOrder } = paymentInit;
 
     const options = {
       key: keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -682,6 +726,7 @@ const Checkout = () => {
       })),
       shippingAddress: {
         fullName: formData.fullName,
+        email: formData.email,
         phone: formData.phone,
         addressLine1: formData.addressLine1,
         addressLine2: formData.addressLine2,
@@ -731,16 +776,7 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-white px-4 py-6 pb-8">
       <div className="max-w-[1000px] mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Checkout</h1>
-        <div className="mb-8 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-          <p className="font-bold text-gray-900">Payment options for every item</p>
-          <p className="mt-1">
-            Choose <strong>full payment online</strong> or <strong>Cash on Delivery (COD)</strong>.
-            To book a COD order, you must pay at least{' '}
-            <strong>{COD_ADVANCE_PERCENTAGE}% in advance</strong> online; the remaining balance is collected
-            when your order is delivered.
-          </p>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center mb-8">
@@ -792,42 +828,65 @@ const Checkout = () => {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-gray-700 mb-2 block">Address Line 1 *</Label>
+                    <Label className="text-gray-700 mb-2 block">Address *</Label>
                     <input type="text" name="addressLine1" value={formData.addressLine1}
                       onChange={handleInputChange}
                       className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
                   </div>
                   <div>
-                    <Label className="text-gray-700 mb-2 block">Address Line 2</Label>
+                    <Label className="text-gray-700 mb-2 block">Landmark</Label>
                     <input type="text" name="addressLine2" value={formData.addressLine2}
                       onChange={handleInputChange}
                       className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
+                      <Label className="text-gray-700 mb-2 block">Pincode *</Label>
+                      <input
+                        type="text"
+                        name="pincode"
+                        inputMode="numeric"
+                        autoComplete="postal-code"
+                        maxLength={6}
+                        value={formData.pincode}
+                        onChange={(e) => {
+                          const pincode = normalizePincodeDigits(e.target.value);
+                          setFormData((current) => ({ ...current, pincode }));
+                        }}
+                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]"
+                      />
+                      {pincodeLookupLoading && (
+                        <p className="mt-1 text-xs text-gray-500">Looking up city and state…</p>
+                      )}
+                    </div>
+                    <div>
                       <Label className="text-gray-700 mb-2 block">City *</Label>
-                      <input type="text" name="city" value={formData.city}
+                      <input
+                        type="text"
+                        name="city"
+                        autoComplete="address-level2"
+                        value={formData.city}
                         onChange={handleInputChange}
-                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
+                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]"
+                      />
                     </div>
                     <div>
                       <Label className="text-gray-700 mb-2 block">State *</Label>
-                      <input type="text" name="state" value={formData.state}
+                      <input
+                        type="text"
+                        name="state"
+                        autoComplete="address-level1"
+                        value={formData.state}
                         onChange={handleInputChange}
-                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
-                    </div>
-                    <div>
-                      <Label className="text-gray-700 mb-2 block">Pincode *</Label>
-                      <input type="text" name="pincode" value={formData.pincode}
-                        onChange={handleInputChange}
-                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
+                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]"
+                      />
                     </div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => validateStep1() && setStep(2)}
-                  className="btn-primary-yellow mt-6 w-full rounded-full px-6 py-3 font-bold"
+                  className="mt-6 w-full rounded-full bg-[#0a0a0a] px-6 py-3 font-bold text-white transition-colors hover:bg-[#e63946]"
                 >
                   Continue to Payment
                 </button>
@@ -844,14 +903,13 @@ const Checkout = () => {
                     {
                       value: 'cod',
                       label: `Cash on Delivery (minimum ${COD_ADVANCE_PERCENTAGE}% advance online to confirm)`,
-                      icon: Banknote,
                     },
-                    { value: 'razorpay', label: 'Pay full amount online (UPI / Card / NetBanking)', icon: CreditCard },
-                  ].map(({ value, label, icon: Icon }) => (
+                    { value: 'razorpay', label: 'Pay full amount online (UPI / Card / NetBanking)' },
+                  ].map(({ value, label }) => (
                     <label key={value}
                       className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         formData.paymentMethod === value
-                          ? 'border-[#CA8A04] bg-[#FDE047]'
+                          ? 'border-[#0a0a0a] bg-[#0a0a0a]'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}>
                       <input
@@ -860,15 +918,13 @@ const Checkout = () => {
                         value={value}
                         checked={formData.paymentMethod === value}
                         onChange={handleInputChange}
-                        className="h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border-2 border-[#0a0a0a] bg-white checked:border-[#0a0a0a] checked:bg-[#0a0a0a]"
+                        className={`h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border-2 bg-white ${
+                          formData.paymentMethod === value
+                            ? 'border-white checked:border-white checked:bg-white'
+                            : 'border-[#0a0a0a] checked:border-[#0a0a0a] checked:bg-[#0a0a0a]'
+                        }`}
                       />
-                      <Icon
-                        className={
-                          formData.paymentMethod === value ? 'text-[#0a0a0a]' : 'text-[#CA8A04]'
-                        }
-                        size={24}
-                      />
-                      <span className="font-bold text-gray-900">{label}</span>
+                      <span className={`font-bold ${formData.paymentMethod === value ? 'text-white' : 'text-gray-900'}`}>{label}</span>
                     </label>
                   ))}
                 </div>
@@ -954,7 +1010,7 @@ const Checkout = () => {
                     ))}
                   </div>
                 </div>
-                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 text-sm text-[#0a0a0a]">
                   <p className="font-bold">Payment confirmation can take up to 2 minutes.</p>
                   <p className="mt-1">
                     After completing payment, please wait on this page. Do not close, refresh, or go back until your order confirmation appears.
@@ -1013,7 +1069,7 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between gap-4 text-gray-700">
                   <span>Delivery charge</span>
-                  <span>{deliveryCharge === 0 ? 'FREE' : formatINR(deliveryCharge)}</span>
+                  <span>{formatINR(deliveryCharge)}</span>
                 </div>
                 {firstPurchaseEligible && firstPurchaseDiscount > 0 && (
                   <div className="flex justify-between gap-4 text-green-700">

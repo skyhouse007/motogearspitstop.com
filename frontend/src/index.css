@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -75,6 +75,17 @@
   .font-montserrat-bold {
     font-family: 'Montserrat', sans-serif;
     font-weight: 700;
+  }
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+  .font-poppins-medium {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+  }
+  .font-poppins-semibold {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
   }
   .btn-primary-yellow {
     @apply bg-[#FDE047] text-[#0a0a0a] transition-colors hover:bg-[#FACC15];

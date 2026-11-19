@@ -111,14 +111,14 @@ const SearchBar = ({ onSearchTriggered, autoFocus = false, compact = false }) =>
       ref={searchRef}
     >
       {compact ? (
-        <div className="relative flex min-h-[48px] items-stretch rounded-full border border-gray-300 bg-white shadow-sm transition-colors focus-within:border-[#e63946] sm:min-h-[56px] md:min-h-[76px]">
+        <div className="relative flex min-h-[40px] items-stretch rounded-full border border-gray-300 bg-white shadow-sm transition-colors focus-within:border-[#e63946] sm:min-h-[42px] md:min-h-[44px]">
           <button
             type="button"
             onClick={() => {
               setShowCategoryMenu((open) => !open);
               setIsFocused(false);
             }}
-            className="font-montserrat-bold flex shrink-0 items-center gap-1.5 self-stretch rounded-l-full pl-4 pr-2 text-xs uppercase tracking-[0.08em] text-[#CA8A04] transition-colors hover:text-[#e63946] sm:pl-5 sm:pr-2.5 sm:text-sm"
+            className="font-montserrat-bold flex shrink-0 items-center gap-1 self-stretch rounded-l-full pl-3 pr-1.5 text-[11px] uppercase tracking-[0.08em] text-[#CA8A04] transition-colors hover:text-[#e63946] sm:pl-3.5 sm:pr-2 sm:text-xs"
             aria-expanded={showCategoryMenu}
             aria-haspopup="true"
           >
@@ -132,7 +132,7 @@ const SearchBar = ({ onSearchTriggered, autoFocus = false, compact = false }) =>
           </button>
 
           <div
-            className="my-2 w-px shrink-0 self-stretch bg-gray-300 md:my-3.5"
+            className="my-1.5 w-px shrink-0 self-stretch bg-gray-300 md:my-2"
             aria-hidden
           />
 
@@ -148,7 +148,7 @@ const SearchBar = ({ onSearchTriggered, autoFocus = false, compact = false }) =>
               }}
               onKeyDown={handleKeyDown}
               placeholder="WHAT ARE YOU LOOKING FOR?"
-              className="font-montserrat h-full min-h-[48px] w-full border-0 bg-transparent py-2 pl-3 pr-12 text-sm uppercase tracking-[0.06em] text-[#0a0a0a] placeholder:uppercase placeholder:tracking-[0.06em] placeholder:text-gray-400 focus:outline-none sm:min-h-[56px] sm:py-2.5 sm:pl-4 sm:pr-14 sm:text-base md:min-h-[76px] md:py-4 md:pl-5 md:pr-16"
+              className="font-montserrat h-full min-h-[40px] w-full border-0 bg-transparent py-1.5 pl-2.5 pr-10 text-xs uppercase tracking-[0.06em] text-[#0a0a0a] placeholder:uppercase placeholder:tracking-[0.06em] placeholder:text-gray-400 focus:outline-none sm:min-h-[42px] sm:py-2 sm:pl-3 sm:pr-11 sm:text-sm md:min-h-[44px] md:py-2 md:pl-3.5 md:pr-12"
             />
 
             {query && (
@@ -212,12 +212,12 @@ const SearchBar = ({ onSearchTriggered, autoFocus = false, compact = false }) =>
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="font-montserrat-bold absolute left-0 top-full z-[110] mt-2 w-72 max-h-[min(70vh,420px)] overflow-y-auto rounded-xl border border-gray-200 bg-white py-2 shadow-xl"
+            className="font-poppins absolute left-0 top-full z-[110] mt-2 w-72 max-h-[min(70vh,420px)] overflow-y-auto rounded-xl border border-gray-200 bg-white py-2 shadow-xl"
           >
             <Link
               to="/products"
               onClick={closeCategoryMenu}
-              className="block px-4 py-2.5 text-sm uppercase tracking-wide text-[#0a0a0a] transition-colors hover:bg-gray-50 hover:text-[#e63946]"
+              className="font-poppins font-semibold block px-4 py-2.5 text-sm tracking-wide text-[#0a0a0a] transition-colors hover:bg-gray-50 hover:text-[#e63946]"
             >
               All Categories
             </Link>
@@ -227,7 +227,7 @@ const SearchBar = ({ onSearchTriggered, autoFocus = false, compact = false }) =>
                 key={category.name}
                 to={category.isBrand ? '/products' : productsUrl({ category: category.name })}
                 onClick={closeCategoryMenu}
-                className="block px-4 py-2.5 text-sm text-gray-800 transition-colors hover:bg-gray-50 hover:text-[#e63946]"
+                className="font-poppins font-medium block px-4 py-2.5 text-sm text-gray-800 transition-colors hover:bg-gray-50 hover:text-[#e63946]"
               >
                 {category.name}
               </Link>

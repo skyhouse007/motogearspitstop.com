@@ -52,10 +52,23 @@ export const useOrderStore = create((set) => ({
   createRazorpayOrder: async (amount) => {
     try {
       const finalAmount = Math.round(Number(amount));
+      if (!Number.isFinite(finalAmount) || finalAmount < 1) {
+        return { success: false, message: 'Invalid payment amount. Please refresh and try again.' };
+      }
       const res = await api.post('/payment/create-order', { amount: finalAmount });
+      if (!res.data?.order?.id) {
+        return { success: false, message: 'Payment gateway returned an invalid response.' };
+      }
       return { success: true, keyId: res.data.keyId, order: res.data.order };
     } catch (err) {
-      return { success: false, message: err.response?.data?.message };
+      const message =
+        err.response?.data?.message ||
+        (err.response?.status === 401
+          ? 'Payment could not start without login. Sign in or use the latest backend for guest checkout.'
+          : null) ||
+        err.message ||
+        'Could not initiate payment';
+      return { success: false, message };
     }
   },
 

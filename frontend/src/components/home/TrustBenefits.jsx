@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Truck, CheckCircle2, ShieldCheck, Award, MessageSquare } from 'lucide-react';
+import { Truck, CheckCircle2, ShieldCheck, Award } from 'lucide-react';
+import WhatsAppIcon from '@/components/WhatsAppIcon';
 
 const BENEFITS = [
   {
     icon: Truck,
     title: 'Pan India Shipping',
-    description: 'Free delivery on orders above ₹5,000',
+    description: 'Delivery from ₹399 (1 item), ₹499 (2), ₹899 (3+)',
     highlight: 'Fast Dispatch',
     stat: '24H',
     statLabel: 'Dispatch',
@@ -36,7 +37,8 @@ const BENEFITS = [
     statLabel: 'Brands',
   },
   {
-    icon: MessageSquare,
+    icon: null,
+    isWhatsApp: true,
     title: 'WhatsApp Support',
     description: '24/7 expert customer assistance',
     highlight: 'Instant Help',
@@ -89,6 +91,7 @@ const TrustBenefits = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-0">
           {BENEFITS.map((benefit, idx) => {
             const Icon = benefit.icon;
+            const isWhatsApp = Boolean(benefit.isWhatsApp);
             const isLast = idx === BENEFITS.length - 1;
             const isSecondLast = idx === BENEFITS.length - 2;
 
@@ -143,12 +146,22 @@ const TrustBenefits = () => {
                   <div className="absolute inset-0 bg-red-600/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                   {/* Icon square */}
-                  <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-black border-2 border-black text-white flex items-center justify-center shadow-lg group-hover:bg-red-600 group-hover:border-red-500 transition-all duration-300">
-                    <Icon
-                      size={22}
-                      className="text-red-500 group-hover:text-white transition-all duration-300 group-hover:scale-110 group-hover:rotate-6"
-                      strokeWidth={2.2}
-                    />
+                  <div
+                    className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-2 flex items-center justify-center shadow-lg transition-all duration-300 ${
+                      isWhatsApp
+                        ? 'bg-[#25D366] border-[#25D366] group-hover:bg-[#1daa5b] group-hover:border-[#1daa5b]'
+                        : 'bg-black border-black text-white group-hover:bg-red-600 group-hover:border-red-500'
+                    }`}
+                  >
+                    {isWhatsApp ? (
+                      <WhatsAppIcon className="h-7 w-7 sm:h-8 sm:w-8 fill-white transition-transform duration-300 group-hover:scale-110" />
+                    ) : (
+                      <Icon
+                        size={22}
+                        className="text-red-500 group-hover:text-white transition-all duration-300 group-hover:scale-110 group-hover:rotate-6"
+                        strokeWidth={2.2}
+                      />
+                    )}
                   </div>
                 </div>
 

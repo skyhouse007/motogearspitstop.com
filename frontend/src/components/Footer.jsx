@@ -11,31 +11,31 @@ import WhatsAppIcon from '@/components/WhatsAppIcon';
 
 const Footer = () => {
   return (
-    <footer className="font-montserrat-bold bg-[#FDE047] border-t border-[#e5c940] pt-16 pb-8 text-[#0a0a0a]">
+    <footer className="font-montserrat-bold bg-white border-t border-gray-200 pt-16 pb-8 text-[#0a0a0a]">
       <div className="max-w-[1400px] mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* About */}
           <div>
             <Link to="/" className="block mb-6">
               <img 
-                src="/logo.webp"
+                src="/logo.jpg?v=moto-gears-hq"
                 alt="Moto Gears - Bike Accessories" 
-                className="h-16 md:h-20 lg:h-24 w-auto object-contain"
+                className="h-20 w-auto max-w-[220px] object-contain md:h-24 md:max-w-[260px] lg:h-28 lg:max-w-[300px]"
               />
             </Link>
             <p className="text-[#0a0a0a]/85 text-sm mb-6 leading-relaxed">
               Your one-stop destination for premium motorcycle accessories and riding gear. Built for riders, engineered for roads.
             </p>
             <div className="flex gap-4">
-              <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="bg-white/70 p-2 rounded-sm text-[#0a0a0a] hover:bg-[#e63946] hover:text-white transition-all" aria-label="Instagram">
+              <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="border border-gray-200 bg-gray-50 p-2 rounded-sm text-[#0a0a0a] hover:bg-[#e63946] hover:text-white hover:border-[#e63946] transition-all" aria-label="Instagram">
                 <Instagram size={20} />
               </a>
               {YOUTUBE_URL ? (
-                <a href={YOUTUBE_URL} target="_blank" rel="noopener noreferrer" className="bg-white/70 p-2 rounded-sm text-[#0a0a0a] hover:bg-[#e63946] hover:text-white transition-all" aria-label="YouTube">
+                <a href={YOUTUBE_URL} target="_blank" rel="noopener noreferrer" className="border border-gray-200 bg-gray-50 p-2 rounded-sm text-[#0a0a0a] hover:bg-[#e63946] hover:text-white hover:border-[#e63946] transition-all" aria-label="YouTube">
                   <Youtube size={20} />
                 </a>
               ) : (
-                <span className="bg-white/70 p-2 rounded-sm text-[#0a0a0a]" title="Add VITE_YOUTUBE_URL to link this icon">
+                <span className="border border-gray-200 bg-gray-50 p-2 rounded-sm text-[#0a0a0a]" title="Add VITE_YOUTUBE_URL to link this icon">
                   <Youtube size={20} aria-hidden />
                 </span>
               )}
@@ -89,7 +89,7 @@ const Footer = () => {
               <input 
                 type="email" 
                 placeholder="Your email address" 
-                className="bg-white text-[#0a0a0a] font-montserrat-bold placeholder:font-montserrat-bold px-4 py-3 w-full focus:outline-none border border-[#0a0a0a]/20 focus:border-[#e63946]"
+                className="bg-gray-50 text-[#0a0a0a] font-montserrat-bold placeholder:font-montserrat-bold px-4 py-3 w-full focus:outline-none border border-gray-200 focus:border-[#e63946]"
               />
               <button className="bg-[#0a0a0a] px-4 text-white hover:bg-[#e63946] transition-colors">
                 <ArrowRight size={20} />
@@ -98,13 +98,13 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-[#0a0a0a]/15 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="border-t border-gray-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[#0a0a0a]/70 text-xs">
             © 2026 MotoGearsPitstop. All rights reserved.
           </p>
           <div className="flex gap-3">
              {['UPI', 'VISA', 'Mastercard', 'RuPay'].map((payment) => (
-                <span key={payment} className="text-[#0a0a0a]/80 text-xs border border-[#0a0a0a]/25 bg-white/40 px-2 py-1 rounded-sm">{payment}</span>
+                <span key={payment} className="text-[#0a0a0a]/80 text-xs border border-gray-200 bg-gray-50 px-2 py-1 rounded-sm">{payment}</span>
              ))}
           </div>
         </div>

@@ -18,7 +18,7 @@ export const DEFAULT_OG_IMAGE =
 export const TITLE_SUFFIX = SITE_NAME;
 export const DEFAULT_TITLE = `${SITE_NAME} — Premium Motorcycle Accessories & Riding Gear`;
 export const DEFAULT_DESCRIPTION =
-  'Shop premium motorcycle accessories, riding gear, helmets, jackets, crash guards, and touring essentials for riders across India. Free shipping on orders above ₹5000.';
+  'Shop premium motorcycle accessories, riding gear, helmets, jackets, crash guards, and touring essentials for riders across India. Pan India delivery with transparent shipping fees.';
 
 /** Routes that must never be indexed */
 export const NOINDEX_PATH_PREFIXES = [

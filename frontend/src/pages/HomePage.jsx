@@ -18,7 +18,6 @@ import ModernTechSection from '@/components/home/ModernTechSection';
 import RidingGearShowcase from '@/components/home/RidingGearShowcase';
 import TouringShowcase from '@/components/home/TouringShowcase';
 import TrustBenefits from '@/components/home/TrustBenefits';
-import FirstPurchasePromoModal from '@/components/home/FirstPurchasePromoModal';
 const HomePage = () => {
   return (
     <>
@@ -29,7 +28,6 @@ const HomePage = () => {
         ogImage={DEFAULT_OG_IMAGE}
         jsonLd={[organizationSchema(), websiteSchema()]}
       />
-      <FirstPurchasePromoModal />
       <div className="bg-white min-h-screen">
         <HeroSection />
         <CategoryShowcase />

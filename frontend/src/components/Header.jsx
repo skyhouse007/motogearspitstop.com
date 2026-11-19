@@ -81,16 +81,16 @@ const Header = forwardRef((props, ref) => {
   }));
 
   const mobileMenuTextClass =
-    'text-base font-bold tracking-wide text-gray-950 transition-colors hover:text-[#e63946]';
+    'font-poppins font-semibold text-base tracking-wide text-gray-950 transition-colors hover:text-[#e63946]';
   const mobileMenuRowClass = `block w-full border-b border-gray-100 px-5 py-3.5 text-left ${mobileMenuTextClass}`;
   const mobileMenuButtonRowClass = `flex w-full items-center justify-between border-b border-gray-100 px-5 py-3.5 text-left ${mobileMenuTextClass}`;
   const mobileMenuSubTextClass =
-    'text-base font-bold tracking-wide text-white transition-colors hover:text-[#e63946]';
+    'font-poppins font-medium text-base tracking-wide text-white transition-colors hover:text-[#e63946]';
   const mobileMenuSubRowClass = `block w-full border-b border-[#222] px-5 py-3.5 text-left ${mobileMenuSubTextClass}`;
   const mobileMenuSubButtonRowClass = `flex w-full items-center justify-between border-b border-[#222] px-5 py-3.5 text-left ${mobileMenuSubTextClass}`;
 
   const desktopNavLinkClass =
-    'whitespace-nowrap text-lg uppercase tracking-[0.08em] text-[#0a0a0a] transition-colors hover:text-[#e63946] xl:text-xl 2xl:text-2xl';
+    'whitespace-nowrap text-sm uppercase tracking-[0.08em] text-[#0a0a0a] transition-colors hover:text-[#e63946] md:text-base xl:text-lg';
   const desktopNavTriggerClass = `${desktopNavLinkClass} inline-flex items-center gap-1.5`;
 
   const instagramCtaLink = (variant) => (
@@ -99,10 +99,10 @@ const Header = forwardRef((props, ref) => {
       target="_blank"
       rel="noopener noreferrer"
       layout
-      className={`font-montserrat-bold inline-flex shrink-0 items-center justify-center self-center overflow-hidden rounded-full bg-gradient-to-r from-[#f09433] via-[#e6683c] via-[#dc2743] via-[#cc2366] to-[#bc1888] text-base text-white shadow-sm transition-opacity hover:opacity-95 md:text-lg ${
+      className={`font-montserrat-bold inline-flex shrink-0 items-center justify-center self-center overflow-hidden rounded-full bg-gradient-to-r from-[#f09433] via-[#e6683c] via-[#dc2743] via-[#cc2366] to-[#bc1888] text-sm text-white shadow-sm transition-opacity hover:opacity-95 md:text-base ${
         variant === 'desktop'
-          ? `hidden py-3 md:inline-flex md:ml-10 lg:ml-16 xl:ml-20 md:py-3 ${instagramCtaShowsFollow ? 'gap-3.5' : 'gap-0'}`
-          : `py-2 md:hidden ${instagramCtaShowsFollow ? 'gap-3' : 'gap-0'}`
+          ? `hidden py-2 md:inline-flex md:ml-6 lg:ml-8 xl:ml-10 md:py-2 ${instagramCtaShowsFollow ? 'gap-2.5' : 'gap-0'}`
+          : `py-1.5 md:hidden ${instagramCtaShowsFollow ? 'gap-2' : 'gap-0'}`
       }`}
       animate={{
         paddingLeft: instagramCtaShowsFollow ? (variant === 'desktop' ? 20 : 14) : 14,
@@ -113,7 +113,7 @@ const Header = forwardRef((props, ref) => {
         instagramCtaShowsFollow ? `Follow us on Instagram` : 'Instagram'
       }
     >
-      <Instagram size={22} strokeWidth={2.25} className="shrink-0" aria-hidden />
+      <Instagram size={18} strokeWidth={2.25} className="shrink-0" aria-hidden />
       <motion.span
         className="block overflow-hidden whitespace-nowrap"
         initial={false}
@@ -140,7 +140,7 @@ const Header = forwardRef((props, ref) => {
         >
           {Array.from({ length: 8 }).map((_, idx) => (
             <span key={idx} className="px-8">
-              Free Shipping on Orders Above ₹5000 | Use Code: RIDEFREE
+              Pan India Delivery | Official Store in Bengaluru
             </span>
           ))}
         </motion.div>
@@ -151,30 +151,15 @@ const Header = forwardRef((props, ref) => {
           className={`relative transition-shadow duration-300 ${isScrolled ? 'shadow-lg shadow-black/25' : ''}`}
           onMouseLeave={() => setDesktopMenu(null)}
         >
-        <div className="w-full bg-[#FDE047] px-4 py-2.5 sm:px-5 sm:py-3 md:px-6 md:py-4 xl:py-5">
+        <div className="w-full bg-white px-3 py-2 sm:px-4 sm:py-2 md:px-5 md:py-2.5">
           <div className="mx-auto w-full max-w-[1600px]">
-            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-2 sm:gap-x-4 sm:gap-y-2 md:min-h-[5.5rem] md:gap-x-5 md:gap-y-3 xl:min-h-[6rem]">
-              <div className="relative z-10 col-start-1 row-start-1 flex shrink-0 items-center gap-1 self-center pl-2 sm:gap-2 sm:pl-5 md:pl-8 lg:pl-10">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen((open) => !open);
-                    setDesktopMenu(null);
-                  }}
-                  className="flex items-center p-1 text-[#0a0a0a] transition-colors hover:text-[#e63946] xl:hidden"
-                  aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                >
-                  {isMobileMenuOpen ? (
-                    <X size={28} strokeWidth={2.25} className="sm:h-8 sm:w-8" />
-                  ) : (
-                    <Menu size={28} strokeWidth={2.25} className="sm:h-8 sm:w-8" />
-                  )}
-                </button>
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-1.5 sm:gap-x-3 sm:gap-y-1.5 md:min-h-[3.25rem] md:gap-x-4 xl:min-h-[3.5rem]">
+              <div className="relative z-10 col-start-1 row-start-1 flex shrink-0 items-center gap-1 self-center pl-1 sm:gap-1.5 sm:pl-3 md:pl-5 lg:pl-6">
                 <Link to="/" className="flex shrink-0 items-center">
                   <img
-                    src="/logo.webp"
+                    src="/logo.jpg?v=moto-gears-hq"
                     alt="Moto Gears - Bike Accessories"
-                    className="h-12 w-auto object-contain sm:h-16 md:h-20 xl:h-24"
+                    className="h-11 w-auto max-w-[120px] object-contain sm:h-12 sm:max-w-[132px] md:h-[3.25rem] md:max-w-[148px] xl:h-14 xl:max-w-[168px]"
                   />
                 </Link>
               </div>
@@ -189,10 +174,10 @@ const Header = forwardRef((props, ref) => {
                 {instagramCtaLink('desktop')}
               </div>
 
-              <div className="relative z-10 col-start-3 row-start-1 flex shrink-0 items-center justify-self-end gap-2 sm:gap-3 md:gap-6">
+              <div className="relative z-10 col-start-3 row-start-1 flex shrink-0 items-center justify-self-end gap-1.5 sm:gap-2 md:gap-4">
                 {instagramCtaLink('mobile')}
                 <Link to="/cart" className="relative flex items-center p-1 text-[#0a0a0a] transition-colors hover:text-[#e63946] group" aria-label="Cart">
-                  <ShoppingCart className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={2.25} />
+                  <ShoppingCart className="h-6 w-6" strokeWidth={2.25} />
                   {cartCount > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#e63946] text-[11px] font-bold text-white">
                       {cartCount}
@@ -214,13 +199,29 @@ const Header = forwardRef((props, ref) => {
                 >
                   {isAuthenticated ? (
                     <>
-                      <User className="h-7 w-7 shrink-0 sm:hidden sm:h-8 sm:w-8" strokeWidth={2.25} />
-                      <span className="hidden truncate text-base font-bold uppercase sm:inline">
+                      <User className="h-6 w-6 shrink-0 sm:hidden" strokeWidth={2.25} />
+                      <span className="hidden truncate text-sm font-bold uppercase sm:inline">
                         {user?.name || 'Account'}
                       </span>
                     </>
                   ) : (
-                    <User className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={2.25} />
+                    <User className="h-6 w-6" strokeWidth={2.25} />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen((open) => !open);
+                    setDesktopMenu(null);
+                  }}
+                  className="flex items-center p-1 text-[#0a0a0a] transition-colors hover:text-[#e63946] xl:hidden"
+                  aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                >
+                  {isMobileMenuOpen ? (
+                    <X size={24} strokeWidth={2.25} className="h-6 w-6" />
+                  ) : (
+                    <Menu size={24} strokeWidth={2.25} className="h-6 w-6" />
                   )}
                 </button>
 
@@ -266,10 +267,10 @@ const Header = forwardRef((props, ref) => {
             </div>
 
             <nav
-              className="font-montserrat-bold hidden min-w-0 flex-col items-stretch gap-3 pb-0.5 pl-5 pt-3 uppercase tracking-[0.08em] sm:pl-6 md:pl-8 lg:pl-10 xl:flex"
+              className="font-montserrat-bold hidden min-w-0 flex-col items-stretch gap-2 pb-0 pl-3 pt-1.5 uppercase tracking-[0.08em] sm:pl-4 md:pl-5 lg:pl-6 xl:flex"
               aria-label="Shop categories"
             >
-              <div className="flex min-w-0 flex-wrap items-center justify-start gap-x-8 gap-y-3 xl:gap-x-10 2xl:gap-x-12">
+              <div className="flex min-w-0 flex-wrap items-center justify-start gap-x-5 gap-y-2 xl:gap-x-7 2xl:gap-x-8">
                 <div
                   className="relative shrink-0"
                   onMouseEnter={() => setDesktopMenu('bike')}
@@ -280,7 +281,7 @@ const Header = forwardRef((props, ref) => {
                   >
                     Shop By Bike
                     <ChevronDown
-                      size={22}
+                      size={16}
                       strokeWidth={2.5}
                       className={`shrink-0 transition-transform duration-200 ${desktopMenu === 'bike' ? 'rotate-180' : ''}`}
                     />
@@ -296,7 +297,7 @@ const Header = forwardRef((props, ref) => {
                   </Link>
                 ))}
               </div>
-              <div className="flex min-w-0 flex-wrap items-center justify-start gap-x-8 gap-y-3 xl:gap-x-10 2xl:gap-x-12">
+              <div className="flex min-w-0 flex-wrap items-center justify-start gap-x-5 gap-y-2 xl:gap-x-7 2xl:gap-x-8">
                 {shopCategories.slice(4).map((category) => (
                   <Link
                     key={category.name}
@@ -349,7 +350,7 @@ const Header = forwardRef((props, ref) => {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-              className="absolute bottom-0 left-0 right-0 flex max-h-[min(88vh,820px)] flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl"
+              className="font-poppins absolute bottom-0 left-0 right-0 flex max-h-[min(88vh,820px)] flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative flex shrink-0 items-center justify-center border-b border-gray-100 py-3 px-4">
@@ -363,7 +364,7 @@ const Header = forwardRef((props, ref) => {
                   <X size={22} strokeWidth={2.25} />
                 </button>
               </div>
-              <nav className="min-h-0 flex-1 overflow-y-auto pb-8 text-left text-gray-950">
+              <nav className="font-poppins min-h-0 flex-1 overflow-y-auto pb-8 text-left text-gray-950">
                 <button
                   type="button"
                   onClick={() => setIsMobileBikeOpen((open) => !open)}
@@ -524,7 +525,7 @@ const Header = forwardRef((props, ref) => {
                   {isAuthenticated ? user?.name || 'Account' : 'Login / Sign Up'}
                 </button>
                 {isAuthenticated && showAccountMenu && (
-                  <div className="border-b border-gray-100 bg-gray-50 px-5 py-2">
+                  <div className="font-poppins border-b border-gray-100 bg-gray-50 px-5 py-2">
                     {user?.role === 'admin' && (
                       <Link
                         to="/admin"
@@ -551,7 +552,7 @@ const Header = forwardRef((props, ref) => {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className={`block w-full border-b-0 py-2.5 text-left text-base font-bold tracking-wide text-[#e63946] hover:text-[#d62839]`}
+                      className="font-poppins font-semibold block w-full border-b-0 py-2.5 text-left text-base tracking-wide text-[#e63946] hover:text-[#d62839]"
                     >
                       Logout
                     </button>

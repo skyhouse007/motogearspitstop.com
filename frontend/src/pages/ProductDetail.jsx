@@ -300,7 +300,7 @@ const ProductDetail = () => {
                   {product.bikes.map((bike, idx) => (
                     <span
                       key={idx}
-                      className="bg-[#FDE047] text-[#0a0a0a] px-3 py-1 rounded-full text-sm font-bold border border-[#e5c940]"
+                      className="bg-[#0a0a0a] text-white px-3 py-1 rounded-full text-sm font-bold border border-[#0a0a0a]"
                     >
                       {bike}
                     </span>
@@ -350,7 +350,7 @@ const ProductDetail = () => {
                 </button>
                 <button
                   onClick={handleBuyNow}
-                  className="flex w-full items-center justify-center btn-primary-yellow rounded-full px-6 py-4 text-lg font-bold shadow-md"
+                  className="flex w-full items-center justify-center rounded-full bg-[#0a0a0a] px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-[#e63946]"
                 >
                   Buy It Now
                 </button>
@@ -375,8 +375,8 @@ const ProductDetail = () => {
               {/* Benefits */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl border border-[#0a0a0a]/15">
-                  <div className="text-[#0a0a0a] font-bold text-sm">Free Shipping</div>
-                  <div className="text-[#0a0a0a]/80 text-xs">On orders above ₹5000</div>
+                  <div className="text-[#0a0a0a] font-bold text-sm">Pan India Shipping</div>
+                  <div className="text-[#0a0a0a]/80 text-xs">₹399 (1 item) · ₹499 (2) · ₹899 (3+)</div>
                 </div>
                 <div className="p-4 rounded-2xl border border-[#0a0a0a]/15">
                   <div className="text-[#0a0a0a] font-bold text-sm">Genuine Product</div>
@@ -387,11 +387,11 @@ const ProductDetail = () => {
           </div>
 
           {/* Specifications */}
-          <div className="bg-[#FDE047] rounded-lg p-6 border border-[#e5c940] mb-12">
-            <h2 className="text-2xl font-bold text-[#0a0a0a] mb-6">Specifications</h2>
+          <div className="bg-[#e63946] rounded-lg p-6 border border-[#d62839] mb-12">
+            <h2 className="text-2xl font-bold text-white mb-6">Specifications</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(product.specifications).map(([key, value]) => (
-                <div key={key} className="flex justify-between gap-4 py-3 border-b border-[#0a0a0a]/15 text-sm font-bold text-[#0a0a0a]">
+                <div key={key} className="flex justify-between gap-4 py-3 border-b border-white/20 text-sm font-bold text-white">
                   <span>{key}</span>
                   <span className="text-right">{value}</span>
                 </div>

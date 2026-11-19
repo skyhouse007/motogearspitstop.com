@@ -11,6 +11,7 @@ import {
   isFirstPurchaseEligible
 } from '../utils/firstPurchasePromo.js';
 import { sendMetaPurchaseFromOrder } from '../utils/metaCapi.js';
+import { calculateDeliveryChargeByQuantity } from '../utils/deliveryPricing.js';
 
 const escapeHtml = (value = '') => String(value)
   .replace(/&/g, '&amp;')
@@ -20,8 +21,6 @@ const escapeHtml = (value = '') => String(value)
   .replace(/'/g, '&#39;');
 
 const formatCurrency = (value = 0) => `INR ${Number(value || 0).toLocaleString('en-IN')}`;
-const FREE_DELIVERY_MINIMUM = 5000;
-const DELIVERY_CHARGE = 199;
 const COD_ADVANCE_PERCENTAGE = 10;
 
 const calculatePaymentBreakup = (paymentMethod, totalPrice) => {
@@ -127,12 +126,15 @@ export const getFirstPurchaseEligibility = asyncHandler(async (req, res) => {
 const sendOrderEmails = async (order, user) => {
   const shopEmail = process.env.ORDER_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
   const emails = [];
+  const customerEmail = user?.email || order.shippingAddress?.email;
+  const customerName = user?.name || order.shippingAddress?.fullName;
+  const customerForAdmin = user || { name: customerName, email: customerEmail };
 
-  if (user?.email) {
+  if (customerEmail) {
     emails.push(sendEmail({
-      to: user.email,
+      to: customerEmail,
       subject: `MotoGear Pitstop - Order ${order._id} placed`,
-      html: buildCustomerOrderEmail(order, user.name)
+      html: buildCustomerOrderEmail(order, customerName)
     }));
   }
 
@@ -140,7 +142,7 @@ const sendOrderEmails = async (order, user) => {
     emails.push(sendEmail({
       to: shopEmail,
       subject: `New MotoGear Pitstop order - ${order._id}`,
-      html: buildAdminOrderEmail(order, user)
+      html: buildAdminOrderEmail(order, customerForAdmin)
     }));
   }
 
@@ -160,7 +162,10 @@ export const createOrder = asyncHandler(async (req, res) => {
     metaTracking = {},
   } = req.body;
 
-  const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
+  const userId = req.user?._id;
+  const cart = userId
+    ? await Cart.findOne({ user: userId }).populate('items.product')
+    : null;
   let items = [];
 
   if (cart?.items?.length) {
@@ -193,11 +198,12 @@ export const createOrder = asyncHandler(async (req, res) => {
   }
 
   const itemsPrice = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shippingPrice = itemsPrice >= FREE_DELIVERY_MINIMUM ? 0 : DELIVERY_CHARGE;
+  const cartItemCount = items.reduce((acc, item) => acc + Number(item.quantity || 0), 0);
+  const shippingPrice = calculateDeliveryChargeByQuantity(cartItemCount);
   const billBeforeDiscount = itemsPrice + shippingPrice;
 
   let firstPurchaseDiscount = 0;
-  if (await isFirstPurchaseEligible(req.user._id)) {
+  if (userId && await isFirstPurchaseEligible(userId)) {
     firstPurchaseDiscount = calculateFirstPurchaseDiscount(billBeforeDiscount);
   }
 
@@ -210,7 +216,7 @@ export const createOrder = asyncHandler(async (req, res) => {
   }
 
   const order = await Order.create({
-    user: req.user._id,
+    ...(userId ? { user: userId } : {}),
     items,
     shippingAddress,
     paymentInfo,
@@ -235,7 +241,7 @@ export const createOrder = asyncHandler(async (req, res) => {
       });
     }
 
-    await Cart.findOneAndDelete({ user: req.user._id });
+    await Cart.findOneAndDelete({ user: userId });
   }
 
   res.status(201).json({ success: true, order });
@@ -266,8 +272,15 @@ export const getMyOrders = asyncHandler(async (req, res) => {
 export const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id).populate('user', 'name email');
   if (!order) { res.status(404); throw new Error('Order not found'); }
-  if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-    res.status(403); throw new Error('Not authorized');
+  if (order.user) {
+    if (!req.user) {
+      res.status(403);
+      throw new Error('Not authorized');
+    }
+    if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      res.status(403);
+      throw new Error('Not authorized');
+    }
   }
   res.json({ success: true, order });
 });

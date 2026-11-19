@@ -84,7 +84,7 @@ export const listingMetaDescription = ({ brand, bike, subcategory, category, pro
   }
   if (category) {
     return truncateMeta(
-      `${countPhrase}Shop ${category} at MotoGearsPitstop. Premium motorcycle accessories and riding gear with free shipping on eligible orders.`,
+      `${countPhrase}Shop ${category} at MotoGearsPitstop. Premium motorcycle accessories and riding gear with pan India delivery.`,
     );
   }
   return truncateMeta(

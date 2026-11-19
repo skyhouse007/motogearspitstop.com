@@ -136,7 +136,7 @@ export function sendMetaPurchaseFromOrder({ order, user, metaTracking = {}, req 
   const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
 
   const userData = buildHashedUserData({
-    email: user?.email,
+    email: user?.email || order.shippingAddress?.email,
     phone: order.shippingAddress?.phone || user?.phone,
     firstName,
     lastName,

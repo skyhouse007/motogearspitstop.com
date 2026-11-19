@@ -9,13 +9,13 @@ import {
   getOrderById,
   getFirstPurchaseEligibility
 } from '../controllers/orderController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, optionalProtect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', protect, createOrder);
+router.post('/', optionalProtect, createOrder);
 router.get('/my', protect, getMyOrders);
 router.get('/first-purchase-eligibility', protect, getFirstPurchaseEligibility);
-router.get('/:id', protect, getOrderById);
+router.get('/:id', optionalProtect, getOrderById);
 
 export default router;
