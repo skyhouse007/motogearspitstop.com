@@ -385,16 +385,16 @@
 
 
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, Minus, Plus } from 'lucide-react';
 import useCartStore from '@/store/cartStore';
 import useAuthStore from '@/store/authStore';
 import useOrderStore from '@/store/orderStore';
 import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
-import { FIRST_PURCHASE_PROMO } from '@/config/promotions';
+import { FIRST_PURCHASE_PROMO, ONLINE_PAYMENT_DISCOUNT_RS } from '@/config/promotions';
 import { calculateOrderPricing, COD_ADVANCE_PERCENTAGE } from '@/utils/orderPricing';
 import { getProductImage, handleProductImageError } from '@/utils/imageUtils';
 import IndianPhoneInput from '@/components/IndianPhoneInput';
@@ -442,7 +442,7 @@ const loadRazorpayScript = () => {
 };
 
 const Checkout = () => {
-  const { items, clearCart } = useCartStore();
+  const { items, clearCart, updateQuantity } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
   const {
     createOrder,
@@ -458,6 +458,36 @@ const Checkout = () => {
   const [firstPurchaseEligible, setFirstPurchaseEligible] = useState(false);
   const [pincodeLookupLoading, setPincodeLookupLoading] = useState(false);
   const checkoutTracked = useRef(false);
+  const checkoutTopRef = useRef(null);
+  const emptyCartRedirect = useRef(false);
+
+  const scrollCheckoutToTop = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    checkoutTopRef.current?.scrollIntoView({ block: 'start', inline: 'nearest' });
+  };
+
+  useLayoutEffect(() => {
+    setStep(1);
+    scrollCheckoutToTop();
+  }, []);
+
+  useLayoutEffect(() => {
+    scrollCheckoutToTop();
+  }, [step]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      scrollCheckoutToTop();
+      window.requestAnimationFrame(scrollCheckoutToTop);
+    });
+    const t = window.setTimeout(scrollCheckoutToTop, 100);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(t);
+    };
+  }, [step]);
   const lastPincodeLookup = useRef('');
   const [formData, setFormData] = useState({
     fullName: user?.name || '',
@@ -502,10 +532,15 @@ const Checkout = () => {
 
   const itemsTotal = getItemsTotal(items);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const pricing = calculateOrderPricing(itemsTotal, { firstPurchaseEligible, itemCount });
+  const pricing = calculateOrderPricing(itemsTotal, {
+    firstPurchaseEligible,
+    itemCount,
+    paymentMethod: formData.paymentMethod,
+  });
   const {
     deliveryCharge,
     firstPurchaseDiscount,
+    onlinePaymentDiscount,
     total,
   } = pricing;
   const codAdvanceAmount = total > 0
@@ -569,8 +604,17 @@ const Checkout = () => {
     };
   }, [formData.pincode, toast]);
 
+  useEffect(() => {
+    if (items.length > 0) {
+      emptyCartRedirect.current = false;
+      return;
+    }
+    if (emptyCartRedirect.current) return;
+    emptyCartRedirect.current = true;
+    navigate('/cart', { replace: true });
+  }, [items.length, navigate]);
+
   if (items.length === 0) {
-    navigate('/cart');
     return null;
   }
 
@@ -774,7 +818,10 @@ const Checkout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-6 pb-8">
+    <div
+      ref={checkoutTopRef}
+      className="overflow-anchor-none min-h-screen bg-white px-4 py-6 pb-8"
+    >
       <div className="max-w-[1000px] mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
 
@@ -794,8 +841,8 @@ const Checkout = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="order-1 lg:order-none lg:col-span-2">
 
             {/* Step 1 — Shipping */}
             {step === 1 && (
@@ -902,39 +949,57 @@ const Checkout = () => {
                   {[
                     {
                       value: 'cod',
-                      label: `Cash on Delivery (minimum ${COD_ADVANCE_PERCENTAGE}% advance online to confirm)`,
+                      label: `Cash On Delivery (Minimum ${COD_ADVANCE_PERCENTAGE}% Advance Online To Confirm)`,
                     },
-                    { value: 'razorpay', label: 'Pay full amount online (UPI / Card / NetBanking)' },
-                  ].map(({ value, label }) => (
+                    {
+                      value: 'razorpay',
+                      label: 'Pay Full Amount Online (UPI / Card / NetBanking)',
+                      highlight: `Extra Rs. ${ONLINE_PAYMENT_DISCOUNT_RS} Off`,
+                    },
+                  ].map(({ value, label, highlight }) => {
+                    const selected = formData.paymentMethod === value;
+                    return (
                     <label key={value}
-                      className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        formData.paymentMethod === value
-                          ? 'border-[#0a0a0a] bg-[#0a0a0a]'
-                          : 'border-gray-200 hover:border-gray-300'
+                      className={`relative flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        selected
+                          ? 'border-blue-600 bg-blue-600 text-white'
+                          : 'border-gray-200 bg-white hover:border-blue-200'
                       }`}>
                       <input
                         type="radio"
                         name="paymentMethod"
                         value={value}
-                        checked={formData.paymentMethod === value}
+                        checked={selected}
                         onChange={handleInputChange}
-                        className={`h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border-2 bg-white ${
-                          formData.paymentMethod === value
+                        className={`relative z-[1] h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border-2 bg-white shadow-sm ${
+                          selected
                             ? 'border-white checked:border-white checked:bg-white'
-                            : 'border-[#0a0a0a] checked:border-[#0a0a0a] checked:bg-[#0a0a0a]'
+                            : 'border-blue-600 checked:border-blue-600 checked:bg-blue-600'
                         }`}
                       />
-                      <span className={`font-bold ${formData.paymentMethod === value ? 'text-white' : 'text-gray-900'}`}>{label}</span>
+                      <span className={`relative z-[1] flex min-w-0 flex-1 flex-col gap-0.5 ${selected ? 'text-white' : 'text-gray-900'}`}>
+                        <span className="text-sm font-bold uppercase leading-snug tracking-wide sm:text-base">
+                          {label}
+                        </span>
+                        {highlight && (
+                          <span className={`text-xs font-semibold uppercase tracking-wide ${
+                            selected ? 'text-emerald-300' : 'text-emerald-700'
+                          }`}>
+                            {highlight}
+                          </span>
+                        )}
+                      </span>
                     </label>
-                  ))}
+                    );
+                  })}
                 </div>
                 {formData.paymentMethod === 'cod' && (
-                  <div className="mt-4 rounded-lg border border-[#CA8A04]/40 bg-[#FDE047] p-4 font-bold text-gray-900">
+                  <div className="mt-4 rounded-lg border border-gray-200 bg-transparent p-4 font-bold text-gray-900">
                     <p className="text-sm">COD booking requires advance payment</p>
-                    <p className="mt-1 text-sm">
+                    <p className="mt-1 text-sm font-medium text-gray-600">
                       Minimum {COD_ADVANCE_PERCENTAGE}% must be paid now ({formatINR(codAdvanceAmount)}) to confirm
-                      and book this COD order. Pay the remaining {formatINR(codLeftoverAmount)} in cash when your
-                      order is delivered.
+                      and book this COD order. Pay the remaining {formatINR(codLeftoverAmount)} on delivery — UPI,
+                      card, cash, or any mode you prefer.
                     </p>
                   </div>
                 )}
@@ -1038,13 +1103,16 @@ const Checkout = () => {
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 sticky top-4 shadow-sm">
+          <div className="order-2 lg:order-none lg:col-span-1">
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm lg:sticky lg:top-4">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
               <div className="space-y-4 mb-4">
                 <div className="space-y-3 border-b border-gray-100 pb-4">
-                  {items.map((item) => (
-                    <div key={getItemId(item)} className="flex gap-3 text-sm">
+                  {items.map((item) => {
+                    const itemId = getItemId(item);
+                    const lineTotal = getItemPrice(item) * item.quantity;
+                    return (
+                    <div key={itemId} className="flex gap-3 text-sm">
                       {getItemImage(item) && (
                         <img
                           src={getItemImage(item)}
@@ -1055,13 +1123,35 @@ const Checkout = () => {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="line-clamp-2 font-medium text-gray-900">{getItemName(item)}</p>
-                        <p className="mt-1 text-gray-500">{formatINR(getItemPrice(item))} x {item.quantity}</p>
+                        <p className="mt-1 text-gray-500">{formatINR(getItemPrice(item))}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(itemId, item.quantity - 1)}
+                            className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-gray-700 transition-colors hover:border-blue-600 hover:text-blue-600"
+                            aria-label={`Decrease quantity for ${getItemName(item)}`}
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="min-w-[1.75rem] text-center font-bold text-gray-900">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(itemId, item.quantity + 1)}
+                            className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-gray-700 transition-colors hover:border-blue-600 hover:text-blue-600"
+                            aria-label={`Increase quantity for ${getItemName(item)}`}
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
                       </div>
-                      <span className="flex-shrink-0 font-bold text-gray-900">
-                        {formatINR(getItemPrice(item) * item.quantity)}
+                      <span className="flex-shrink-0 self-start font-bold text-gray-900">
+                        {formatINR(lineTotal)}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="flex justify-between gap-4 text-gray-700">
                   <span>Items ({itemCount})</span>
@@ -1075,6 +1165,12 @@ const Checkout = () => {
                   <div className="flex justify-between gap-4 text-green-700">
                     <span>First purchase ({FIRST_PURCHASE_PROMO.discountPercent}%)</span>
                     <span className="font-bold">-{formatINR(firstPurchaseDiscount)}</span>
+                  </div>
+                )}
+                {formData.paymentMethod === 'razorpay' && onlinePaymentDiscount > 0 && (
+                  <div className="flex justify-between gap-4 text-green-700">
+                    <span>Online payment offer</span>
+                    <span className="font-bold">-{formatINR(onlinePaymentDiscount)}</span>
                   </div>
                 )}
                 {formData.paymentMethod === 'cod' ? (

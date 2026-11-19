@@ -256,7 +256,11 @@ const Cart = () => {
               )}
 
               <button
-                onClick={() => navigate('/checkout')}
+                type="button"
+                onClick={() => {
+                  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                  navigate('/checkout');
+                }}
                 className="btn-primary-yellow mt-6 w-full rounded-full px-6 py-3 font-bold"
               >
                 Proceed to Checkout

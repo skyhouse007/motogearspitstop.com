@@ -12,6 +12,7 @@ import {
 } from '../utils/firstPurchasePromo.js';
 import { sendMetaPurchaseFromOrder } from '../utils/metaCapi.js';
 import { calculateDeliveryChargeByQuantity } from '../utils/deliveryPricing.js';
+import { calculateOnlinePaymentDiscount } from '../utils/onlinePaymentPromo.js';
 
 const escapeHtml = (value = '') => String(value)
   .replace(/&/g, '&amp;')
@@ -207,7 +208,9 @@ export const createOrder = asyncHandler(async (req, res) => {
     firstPurchaseDiscount = calculateFirstPurchaseDiscount(billBeforeDiscount);
   }
 
-  const totalPrice = Math.max(billBeforeDiscount - firstPurchaseDiscount, 0);
+  const afterFirstPurchase = Math.max(billBeforeDiscount - firstPurchaseDiscount, 0);
+  const onlinePaymentDiscount = calculateOnlinePaymentDiscount(paymentMethod, afterFirstPurchase);
+  const totalPrice = Math.max(afterFirstPurchase - onlinePaymentDiscount, 0);
   const paymentBreakup = calculatePaymentBreakup(paymentMethod, totalPrice);
 
   if (paymentBreakup.amountPaid > 0 && !paymentInfo?.razorpay_payment_id) {
@@ -225,6 +228,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     itemsPrice,
     shippingPrice,
     firstPurchaseDiscount,
+    onlinePaymentDiscount,
     totalPrice,
     amountPaid: paymentBreakup.amountPaid,
     amountDue: paymentBreakup.amountDue,

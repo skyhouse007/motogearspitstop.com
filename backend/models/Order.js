@@ -40,6 +40,7 @@ const orderSchema = new mongoose.Schema({
   itemsPrice: { type: Number, default: 0 },
   shippingPrice: { type: Number, default: 0 },
   firstPurchaseDiscount: { type: Number, default: 0 },
+  onlinePaymentDiscount: { type: Number, default: 0 },
   totalPrice: { type: Number, default: 0 },
   amountPaid: { type: Number, default: 0 },
   amountDue: { type: Number, default: 0 },

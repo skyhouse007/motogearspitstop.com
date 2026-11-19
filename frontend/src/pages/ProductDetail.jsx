@@ -25,6 +25,7 @@ import ImageLightbox from '@/components/ImageLightbox';
 import { productsUrl } from '@/utils/urlUtils';
 import { getProductGalleryImages, getProductImage, handleProductImageError } from '@/utils/imageUtils';
 import { getWhatsAppUrl } from '@/config/contact';
+import { getSimilarProducts } from '@/utils/productSimilarity';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -71,6 +72,11 @@ const ProductDetail = () => {
     return [productSchema(product), crumbs];
   }, [product, canonicalPath]);
 
+  const relatedProducts = useMemo(() => {
+    if (!product) return [];
+    return getSimilarProducts(product, products, { limit: 4 });
+  }, [product]);
+
   if (!product) {
     return (
       <>
@@ -96,10 +102,6 @@ const ProductDetail = () => {
   const galleryImages = getProductGalleryImages(product).map((image, index) =>
     galleryImageFallbacks[`${product.id}:${index}`] || image
   );
-  const relatedProducts = products
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
-
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
@@ -126,6 +128,7 @@ const ProductDetail = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     navigate('/checkout');
   };
 

@@ -1,4 +1,4 @@
-import { FIRST_PURCHASE_PROMO } from '@/config/promotions';
+import { FIRST_PURCHASE_PROMO, ONLINE_PAYMENT_DISCOUNT_RS } from '@/config/promotions';
 
 export const COD_ADVANCE_PERCENTAGE = 10;
 
@@ -20,20 +20,32 @@ export const calculateFirstPurchaseDiscount = (billAmount) => {
   );
 };
 
-export const calculateOrderPricing = (itemsTotal, { firstPurchaseEligible = false, itemCount = 0 } = {}) => {
+export const calculateOnlinePaymentDiscount = (paymentMethod, amountAfterOtherDiscounts) => {
+  if (paymentMethod !== 'razorpay') return 0;
+  const base = Math.max(Number(amountAfterOtherDiscounts) || 0, 0);
+  return Math.min(ONLINE_PAYMENT_DISCOUNT_RS, base);
+};
+
+export const calculateOrderPricing = (
+  itemsTotal,
+  { firstPurchaseEligible = false, itemCount = 0, paymentMethod = 'cod' } = {},
+) => {
   const items = Number(itemsTotal || 0);
   const deliveryCharge = calculateDeliveryChargeByQuantity(itemCount);
   const billBeforeDiscount = items + deliveryCharge;
   const firstPurchaseDiscount = firstPurchaseEligible
     ? calculateFirstPurchaseDiscount(billBeforeDiscount)
     : 0;
-  const total = Math.max(billBeforeDiscount - firstPurchaseDiscount, 0);
+  const afterFirstPurchase = Math.max(billBeforeDiscount - firstPurchaseDiscount, 0);
+  const onlinePaymentDiscount = calculateOnlinePaymentDiscount(paymentMethod, afterFirstPurchase);
+  const total = Math.max(afterFirstPurchase - onlinePaymentDiscount, 0);
 
   return {
     itemsTotal: items,
     deliveryCharge,
     billBeforeDiscount,
     firstPurchaseDiscount,
+    onlinePaymentDiscount,
     total,
   };
 };
