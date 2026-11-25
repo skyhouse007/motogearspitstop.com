@@ -1,9 +1,13 @@
 //frontend/src/pages/admin/AdminProducts.jsx
 
-import React, { useMemo, useState } from 'react';
-import { PackageSearch, Search } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { PackageSearch, Pencil, Search } from 'lucide-react';
 import { products as catalogProducts, categories } from '@/data/products';
 import { getProductImage, handleProductImageError } from '@/utils/imageUtils';
+import { mergeCatalogProduct } from '@/utils/mergeCatalogProduct';
+import useCatalogOverrideStore from '@/store/catalogOverrideStore';
+import AdminProductEditModal from '@/components/admin/AdminProductEditModal';
+import api from '@/api/axiosInstance';
 
 const STOCK_STORAGE_KEY = 'motogear_admin_product_stock';
 const PAGE_SIZE = 15;
@@ -22,25 +26,39 @@ const getDefaultStock = (product) => {
   return Number.isFinite(stock) ? stock : 10;
 };
 
-const normalizeProduct = (product, stockOverrides) => {
-  const stock = stockOverrides[product.id] ?? getDefaultStock(product);
+const normalizeProduct = (product, stockOverrides, overrides) => {
+  const merged = mergeCatalogProduct(product, overrides[String(product.id)]);
+  const stock =
+    merged.stock ??
+    stockOverrides[product.id] ??
+    getDefaultStock(product);
 
   return {
-    ...product,
+    ...merged,
     stock: Number(stock),
-    discountedPrice: Math.round(product.price - (product.price * (Number(product.discount || 0) / 100)))
+    discountedPrice: Math.round(merged.price - (merged.price * (Number(merged.discount || 0) / 100))),
   };
 };
 
 export default function AdminProducts() {
+  const overrides = useCatalogOverrideStore((s) => s.overrides);
+  const fetchOverrides = useCatalogOverrideStore((s) => s.fetchOverrides);
+  const upsertLocalOverride = useCatalogOverrideStore((s) => s.upsertLocalOverride);
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [stockOverrides, setStockOverrides] = useState(getStoredStock);
+  const [editProduct, setEditProduct] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  useEffect(() => {
+    fetchOverrides();
+  }, [fetchOverrides]);
 
   const products = useMemo(() => (
-    catalogProducts.map((product) => normalizeProduct(product, stockOverrides))
-  ), [stockOverrides]);
+    catalogProducts.map((product) => normalizeProduct(product, stockOverrides, overrides))
+  ), [stockOverrides, overrides]);
 
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -52,7 +70,7 @@ export default function AdminProducts() {
         product.brand,
         product.category,
         product.subcategory,
-        ...(product.bikes || [])
+        ...(product.bikes || []),
       ].filter(Boolean).some((value) => String(value).toLowerCase().includes(query));
 
       return matchesCategory && matchesSearch;
@@ -70,6 +88,13 @@ export default function AdminProducts() {
     const next = { ...stockOverrides, [productId]: stock };
     setStockOverrides(next);
     localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(next));
+    api.patch(`/admin/catalog-products/${productId}/stock`, { stock }).catch(() => {});
+    upsertLocalOverride(productId, { catalogId: String(productId), stock });
+  };
+
+  const openEditor = (product) => {
+    setEditProduct(product);
+    setEditOpen(true);
   };
 
   const handleSearchChange = (event) => {
@@ -84,11 +109,18 @@ export default function AdminProducts() {
 
   return (
     <div className="min-h-screen bg-gray-950 p-6">
+      <AdminProductEditModal
+        product={editProduct}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={() => fetchOverrides()}
+      />
+
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Products ({catalogProductCount.toLocaleString('en-IN')})</h1>
           <p className="mt-1 text-sm text-gray-400">
-            Showing products from frontend/src/data/products.js with editable admin quantities.
+            Click a product to edit details and upload photos to Cloudinary. Changes apply on the live site.
           </p>
         </div>
 
@@ -117,14 +149,10 @@ export default function AdminProducts() {
       </div>
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-       <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-  <p className="text-sm text-gray-400">Catalog Products</p>
-  <p className="mt-1 text-2xl font-bold text-white">1,846</p>
-</div>
-<div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-  <p className="text-sm text-gray-400">Available Quantity</p>
-  <p className="mt-1 text-2xl font-bold text-white">1,580</p>
-</div>
+        <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
+          <p className="text-sm text-gray-400">Catalog Products</p>
+          <p className="mt-1 text-2xl font-bold text-white">{catalogProductCount.toLocaleString('en-IN')}</p>
+        </div>
         <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
           <p className="text-sm text-gray-400">Available Quantity</p>
           <p className="mt-1 text-2xl font-bold text-white">
@@ -161,9 +189,16 @@ export default function AdminProducts() {
                   </td>
                 </tr>
               ) : visibleProducts.map((product) => (
-                <tr key={product.id} className="border-b border-gray-800 transition-colors hover:bg-gray-800/50">
+                <tr
+                  key={product.id}
+                  className="border-b border-gray-800 transition-colors hover:bg-gray-800/50"
+                >
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => openEditor(product)}
+                      className="flex w-full items-center gap-3 text-left"
+                    >
                       {getProductImage(product) && (
                         <img
                           src={getProductImage(product)}
@@ -172,11 +207,12 @@ export default function AdminProducts() {
                           className="h-11 w-11 rounded object-cover"
                         />
                       )}
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="line-clamp-1 text-sm font-medium text-white">{product.name}</p>
                         <p className="text-xs text-gray-500">ID: {product.id}</p>
                       </div>
-                    </div>
+                      <Pencil className="shrink-0 text-gray-500" size={16} />
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-sm text-gray-300">{product.category}</p>
@@ -195,6 +231,7 @@ export default function AdminProducts() {
                       min={0}
                       value={product.stock}
                       onChange={(event) => updateStock(product.id, event.target.value)}
+                      onClick={(event) => event.stopPropagation()}
                       className={`w-20 rounded border bg-gray-800 px-2 py-1 text-center text-sm outline-none ${
                         product.stock <= 5 ? 'border-red-500 text-red-300' : 'border-gray-700 text-white'
                       }`}

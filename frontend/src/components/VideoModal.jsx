@@ -60,15 +60,46 @@ const VideoModal = () => {
             </div>
 
             {/* Video Container */}
-            <div className="relative w-full aspect-video bg-black">
-              <iframe
-                src={`${activeVideo.videoUrl}?autoplay=1`}
-                title={activeVideo.title}
-                className="absolute inset-0 w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+            <div
+              className={`relative w-full bg-black ${
+                activeVideo.source === 'instagram' ? 'aspect-[9/16] max-h-[80vh] mx-auto' : 'aspect-video'
+              }`}
+            >
+              {activeVideo.videoUrl && !activeVideo.videoUrl.includes('youtube.com/embed') ? (
+                <video
+                  src={activeVideo.videoUrl}
+                  poster={activeVideo.thumbnail}
+                  className="absolute inset-0 h-full w-full object-contain"
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              ) : (
+                <iframe
+                  src={`${activeVideo.videoUrl}?autoplay=1`}
+                  title={activeVideo.title}
+                  className="absolute inset-0 h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
             </div>
+            {activeVideo.permalink && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="border-t border-gray-200 bg-gray-50 px-4 py-3 text-center text-sm"
+              >
+                <a
+                  href={activeVideo.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-red-600 hover:underline"
+                >
+                  Open on Instagram
+                </a>
+              </motion.div>
+            )}
           </motion.div>
         </div>
       )}

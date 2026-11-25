@@ -1,30 +1,36 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Play, Radio, ArrowUpRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VideoCard from './VideoCard';
 import { videos } from '@/data/videos';
+import { useInstagramReels } from '@/hooks/useInstagramReels';
+import { INSTAGRAM_URL } from '@/config/contact';
 
 const ShopShowcaseSection = () => {
   const scrollRef = useRef(null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [scrollProgress, setScrollProgress] = useState(0);
+  const { reels, configured, loading: reelsLoading } = useInstagramReels();
+
+  const catalogVideos = configured && reels.length > 0 ? reels : videos;
+  const fromInstagram = configured && reels.length > 0;
 
   // Categories with counts
   const categoriesWithCounts = useMemo(() => {
-    const counts = videos.reduce((acc, v) => {
+    const counts = catalogVideos.reduce((acc, v) => {
       acc[v.category] = (acc[v.category] || 0) + 1;
       return acc;
     }, {});
     const cats = Object.keys(counts).map((cat) => ({ name: cat, count: counts[cat] }));
-    return [{ name: 'all', count: videos.length }, ...cats];
-  }, []);
+    return [{ name: 'all', count: catalogVideos.length }, ...cats];
+  }, [catalogVideos]);
 
   const filteredVideos = useMemo(() => {
     const filtered = activeCategory === 'all'
-      ? videos
-      : videos.filter((v) => v.category === activeCategory);
-    return filtered.slice(0, 8);
-  }, [activeCategory]);
+      ? catalogVideos
+      : catalogVideos.filter((v) => v.category === activeCategory);
+    return fromInstagram ? filtered : filtered.slice(0, 8);
+  }, [activeCategory, catalogVideos, fromInstagram]);
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -73,7 +79,9 @@ const ShopShowcaseSection = () => {
               <div className="inline-flex items-center gap-1.5 bg-red-600 text-white px-2.5 py-1 rounded-full">
                 
                 <Radio size={11} className="text-white" />
-                <span className="text-[10px] font-black uppercase tracking-widest">On Air</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  {fromInstagram ? 'Instagram' : 'On Air'}
+                </span>
               </div>
             </div>
 
@@ -96,15 +104,30 @@ const ShopShowcaseSection = () => {
             </h2>
 
             <p className="text-gray-600 text-sm sm:text-base mt-3 sm:mt-4 leading-relaxed">
-              Gear reviews. Maintenance hacks. Epic rides. All in one place.
+              {fromInstagram
+                ? 'Latest reels from @motogearpitstop — refreshed from Instagram.'
+                : 'Gear reviews. Maintenance hacks. Epic rides. All in one place.'}
             </p>
+            {fromInstagram && (
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-xs font-bold uppercase tracking-widest text-red-600 hover:underline"
+              >
+                Follow on Instagram
+              </a>
+            )}
           </div>
 
           {/* Navigation arrows (desktop) */}
           <div className="hidden lg:flex items-center gap-3">
             <div className="flex items-center gap-2 text-gray-400 text-xs font-mono uppercase tracking-widest">
               <Play size={12} className="fill-red-600 text-red-600" />
-              <span className="tabular-nums">{filteredVideos.length} Episodes</span>
+              <span className="tabular-nums">
+                {reelsLoading ? '…' : filteredVideos.length}
+                {fromInstagram ? ' Reels' : ' Episodes'}
+              </span>
             </div>
 
             <div className="flex gap-2">

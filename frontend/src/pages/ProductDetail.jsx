@@ -21,21 +21,37 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import { useToast } from '@/components/ui/use-toast';
 import ProductCard from '@/components/ProductCard';
 import ProductImageGallery from '@/components/ProductImageGallery';
+import ProductVideoGallery from '@/components/ProductVideoGallery';
+import { getProductVideos } from '@/utils/mediaUtils';
 import ImageLightbox from '@/components/ImageLightbox';
 import { productsUrl } from '@/utils/urlUtils';
 import { getProductGalleryImages, getProductImage, handleProductImageError } from '@/utils/imageUtils';
 import { getWhatsAppUrl } from '@/config/contact';
 import { getSimilarProducts } from '@/utils/productSimilarity';
+import useCatalogOverrideStore from '@/store/catalogOverrideStore';
+import { mergeCatalogProduct } from '@/utils/mergeCatalogProduct';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const decodedId = decodeURIComponent(id || '');
-  const product = products.find(p =>
+  const overrides = useCatalogOverrideStore((s) => s.overrides);
+  const fetchOverrides = useCatalogOverrideStore((s) => s.fetchOverrides);
+
+  const baseProduct = products.find(p =>
     String(p.id) === decodedId ||
     String(p._id || '') === decodedId ||
     String(p.slug || '') === decodedId
   );
+
+  const product = useMemo(
+    () => mergeCatalogProduct(baseProduct, overrides[String(baseProduct?.id)]),
+    [baseProduct, overrides],
+  );
+
+  useEffect(() => {
+    fetchOverrides();
+  }, [fetchOverrides]);
   const [quantity, setQuantity] = useState(1);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -102,6 +118,7 @@ const ProductDetail = () => {
   const galleryImages = getProductGalleryImages(product).map((image, index) =>
     galleryImageFallbacks[`${product.id}:${index}`] || image
   );
+  const productVideos = product ? getProductVideos(product) : [];
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
@@ -263,6 +280,7 @@ const ProductDetail = () => {
                   fallbackImage={productImage}
                 />
               )}
+              <ProductVideoGallery videos={productVideos} productName={product.name} />
             </div>
 
             {/* Details */}

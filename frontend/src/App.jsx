@@ -24,6 +24,7 @@ import ScrollToTop from '@/components/ScrollToTop';
 import { Toaster } from '@/components/ui/toaster';
 import VideoModal from '@/components/VideoModal';
 import useAuthStore from '@/store/authStore';
+import useCatalogOverrideStore from '@/store/catalogOverrideStore';
 
 // Admin imports
 import AdminLayout from '@/pages/admin/AdminLayout';
@@ -35,10 +36,12 @@ import AdminRevenue from '@/pages/admin/AdminRevenue';
 
 function App() {
   const getMe = useAuthStore(state => state.getMe);
+  const fetchCatalogOverrides = useCatalogOverrideStore((s) => s.fetchOverrides);
 
   useEffect(() => {
     getMe();
-  }, [getMe]);
+    fetchCatalogOverrides();
+  }, [getMe, fetchCatalogOverrides]);
 
   return (
     <Router>

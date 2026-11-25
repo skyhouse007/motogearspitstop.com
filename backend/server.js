@@ -19,6 +19,8 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import shipmentRoutes from './routes/shipmentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import metaRoutes from './routes/metaRoutes.js';
+import instagramRoutes from './routes/instagramRoutes.js';
+import catalogRoutes from './routes/catalogRoutes.js';
 
 dotenv.config();
 connectDB();
@@ -104,6 +106,8 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/shipment', shipmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/meta', metaRoutes);
+app.use('/api/instagram', instagramRoutes);
+app.use('/api/catalog', catalogRoutes);
 
 app.get('/', (req, res) => res.json({ message: 'MotoGearPitstop API Running' }));
 

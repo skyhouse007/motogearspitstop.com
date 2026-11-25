@@ -15,6 +15,9 @@ const ALLOWED_EVENTS = new Set([
   'CompleteRegistration',
   'Contact',
   'FindLocation',
+  'StartTrial',
+  'Subscribe',
+  'Schedule',
 ]);
 
 const normalizeEventName = (name) => {
@@ -80,6 +83,17 @@ export const ingestMetaEvents = asyncHandler(async (req, res) => {
     });
   });
 
-  await sendMetaEvents(payloadEvents);
-  res.json({ success: true });
+  try {
+    const result = await sendMetaEvents(payloadEvents);
+    if (result?.skipped) {
+      res.json({ success: true, meta: { sent: false, reason: result.reason } });
+      return;
+    }
+    res.json({ success: true, meta: { sent: true, events_received: result?.events_received } });
+  } catch (err) {
+    const metaError = err.response?.data?.error;
+    console.error('Meta CAPI ingest failed:', metaError || err.message);
+    res.status(502);
+    throw new Error(metaError?.message || 'Meta Conversions API request failed');
+  }
 });

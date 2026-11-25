@@ -16,10 +16,10 @@ const footerUnderlineLink =
 const Footer = () => {
   return (
     <footer className="font-montserrat-bold bg-[#0a0a0a] border-t border-white/10 pt-16 pb-8 text-white">
-      <div className="max-w-[1400px] mx-auto px-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start gap-12 mb-12">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto mb-12 flex max-w-[1200px] flex-wrap items-start justify-center gap-x-10 gap-y-12 sm:gap-x-12 lg:gap-x-16">
           {/* Quick Links */}
-          <div>
+          <div className="w-full min-w-[14rem] max-w-[16.5rem] flex-1 basis-[calc(50%-1.5rem)] sm:basis-[calc(50%-1.5rem)] lg:basis-0 lg:flex-none">
             <h4 className="text-lg mb-6 tracking-wider text-white">QUICK LINKS</h4>
             <ul className="space-y-3">
               {[
@@ -39,7 +39,7 @@ const Footer = () => {
           </div>
 
           {/* Location */}
-          <div>
+          <div className="w-full min-w-[14rem] max-w-[16.5rem] flex-1 basis-[calc(50%-1.5rem)] sm:basis-[calc(50%-1.5rem)] lg:basis-0 lg:flex-none">
             <h4 className="text-lg mb-6 tracking-wider text-white">LOCATION</h4>
             <p className="font-montserrat mb-6 text-sm leading-relaxed text-white/90">
               {BUSINESS_ADDRESS_LINES.map((line) => (
@@ -106,7 +106,7 @@ const Footer = () => {
           </div>
 
           {/* Contact Us */}
-          <div>
+          <div className="w-full min-w-[14rem] max-w-[16.5rem] flex-1 basis-[calc(50%-1.5rem)] sm:basis-[calc(50%-1.5rem)] lg:basis-0 lg:flex-none">
             <h4 className="text-lg mb-6 tracking-wider text-white">CONTACT US</h4>
             <div className="font-montserrat space-y-4 text-sm text-white">
               <a href={`tel:${BUSINESS_PHONE_E164}`} className="block hover:text-[#c5e840] transition-colors">
@@ -126,7 +126,7 @@ const Footer = () => {
           </div>
 
           {/* Careers */}
-          <div>
+          <div className="w-full min-w-[14rem] max-w-[16.5rem] flex-1 basis-[calc(50%-1.5rem)] sm:basis-[calc(50%-1.5rem)] lg:basis-0 lg:flex-none">
             <h4 className="text-lg mb-6 tracking-wider text-white">CAREERS</h4>
             <div className="font-montserrat space-y-3 text-sm">
               <Link to="/contact" className={`${footerUnderlineLink} block w-fit`}>
@@ -144,8 +144,8 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-white/10 pt-8">
-          <p className="text-white/60 text-xs text-center md:text-left">
+        <div className="mx-auto max-w-[1200px] border-t border-white/10 pt-8">
+          <p className="text-center text-xs text-white/60">
             © 2026 MotoGearsPitstop. All rights reserved.
           </p>
         </div>

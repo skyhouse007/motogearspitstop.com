@@ -12,6 +12,14 @@ import { shopCategories } from '@/components/MegaMenu';
 import ShopByBikeMenu, { bikeGroups } from '@/components/ShopByBikeMenu';
 import SearchBar from '@/components/SearchBar';
 import { productsUrl } from '@/utils/urlUtils';
+
+/** Admin access is only via /admin — never advertise it in the storefront header. */
+const storefrontAccountLabel = (user, fallback = 'Account') => {
+  if (!user) return fallback;
+  if (user.role === 'admin') return fallback;
+  return user.name || fallback;
+};
+
 const Header = forwardRef((props, ref) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -201,7 +209,7 @@ const Header = forwardRef((props, ref) => {
                     <>
                       <User className="h-6 w-6 shrink-0 sm:hidden" strokeWidth={2.25} />
                       <span className="hidden truncate text-sm font-bold uppercase sm:inline">
-                        {user?.name || 'Account'}
+                        {storefrontAccountLabel(user)}
                       </span>
                     </>
                   ) : (
@@ -234,18 +242,9 @@ const Header = forwardRef((props, ref) => {
                       className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-lg border border-gray-200 bg-white p-2 text-gray-900 shadow-xl"
                     >
                       <div className="border-b border-gray-100 px-3 py-2">
-                        <p className="truncate text-sm font-bold">{user?.name || 'Account'}</p>
+                        <p className="truncate text-sm font-bold">{storefrontAccountLabel(user)}</p>
                         {user?.email && <p className="truncate text-xs text-gray-500">{user.email}</p>}
                       </div>
-                      {user?.role === 'admin' && (
-                        <Link
-                          to="/admin"
-                          onClick={() => setShowAccountMenu(false)}
-                          className="mt-2 block w-full rounded-md px-3 py-2 text-left text-sm font-bold text-gray-900 hover:bg-gray-100"
-                        >
-                          Admin Panel
-                        </Link>
-                      )}
                       <Link
                         to="/orders"
                         onClick={() => setShowAccountMenu(false)}
@@ -498,15 +497,6 @@ const Header = forwardRef((props, ref) => {
                 >
                   Shop By Brand
                 </Link>
-                {user?.role === 'admin' && (
-                  <Link
-                    to="/admin"
-                    onClick={closeMobileMenu}
-                    className={`${mobileMenuRowClass} text-[#e63946] hover:text-[#d62839]`}
-                  >
-                    Admin Panel
-                  </Link>
-                )}
                 <Link to="/wishlist" onClick={closeMobileMenu} className={mobileMenuRowClass}>
                   My Wishlist
                 </Link>
@@ -522,22 +512,10 @@ const Header = forwardRef((props, ref) => {
                   }}
                   className={mobileMenuRowClass}
                 >
-                  {isAuthenticated ? user?.name || 'Account' : 'Login / Sign Up'}
+                  {isAuthenticated ? storefrontAccountLabel(user) : 'Login / Sign Up'}
                 </button>
                 {isAuthenticated && showAccountMenu && (
                   <div className="font-poppins border-b border-gray-100 bg-gray-50 px-5 py-2">
-                    {user?.role === 'admin' && (
-                      <Link
-                        to="/admin"
-                        onClick={() => {
-                          setShowAccountMenu(false);
-                          closeMobileMenu();
-                        }}
-                        className={`${mobileMenuRowClass} border-b-0 py-2.5`}
-                      >
-                        Admin Panel
-                      </Link>
-                    )}
                     <Link
                       to="/orders"
                       onClick={() => {

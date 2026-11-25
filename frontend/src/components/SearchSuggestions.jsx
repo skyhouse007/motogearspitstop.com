@@ -26,15 +26,19 @@ const SearchSuggestions = ({
   if (query) return null;
 
   return (
-    <div className="p-4 bg-white border border-gray-200 shadow-lg rounded-b-md w-full text-sm">
+    <div className="p-4 bg-white border border-gray-200 shadow-lg rounded-b-md w-full text-sm font-bold text-[#0a0a0a]">
       {recentSearches.length > 0 && (
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-3 text-gray-600">
-            <div className="flex items-center gap-2 font-medium">
-              <Clock size={16} />
+          <div className="mb-3 flex items-center justify-between text-gray-800">
+            <div className="flex items-center gap-2">
+              <Clock size={16} strokeWidth={2.5} />
               <span>Recent Searches</span>
             </div>
-            <button onClick={onClearRecent} className="text-xs hover:text-[#e63946] transition-colors">
+            <button
+              type="button"
+              onClick={onClearRecent}
+              className="text-xs font-bold text-gray-600 hover:text-[#e63946] transition-colors"
+            >
               Clear
             </button>
           </div>
@@ -42,8 +46,9 @@ const SearchSuggestions = ({
             {recentSearches.map((term, i) => (
               <button
                 key={i}
+                type="button"
                 onClick={() => onSelect(term)}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 font-bold text-gray-800 transition-colors hover:bg-gray-200"
               >
                 {term}
               </button>
@@ -53,16 +58,17 @@ const SearchSuggestions = ({
       )}
 
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3 text-gray-600 font-medium">
-          <TrendingUp size={16} />
+        <div className="mb-3 flex items-center gap-2 text-gray-800">
+          <TrendingUp size={16} strokeWidth={2.5} />
           <span>Popular Searches</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {popularSearches.map((term, i) => (
             <button
               key={i}
+              type="button"
               onClick={() => onSelect(term)}
-              className="bg-gray-50 border border-gray-200 hover:border-[#e63946] text-gray-700 px-3 py-1.5 rounded-full transition-colors"
+              className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 font-bold text-gray-800 transition-colors hover:border-[#e63946]"
             >
               {term}
             </button>
@@ -70,28 +76,40 @@ const SearchSuggestions = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+      <div className="grid grid-cols-2 gap-4 border-t border-gray-200 pt-4">
         <div>
-          <div className="text-gray-600 mb-2 font-medium text-xs uppercase tracking-wider">Top Categories</div>
+          <div className="mb-2 text-xs uppercase tracking-wider text-gray-700">Top Categories</div>
           <ul className="space-y-2">
             {topCategories.map(([cat, count]) => (
               <li key={cat}>
-                <button onClick={() => onSelect(cat)} className="text-gray-700 hover:text-gray-900 flex items-center justify-between w-full group">
+                <button
+                  type="button"
+                  onClick={() => onSelect(cat)}
+                  className="group flex w-full items-center justify-between text-gray-800 hover:text-[#0a0a0a]"
+                >
                   <span>{cat}</span>
-                  <span className="text-gray-500 text-xs bg-gray-100 px-1.5 rounded group-hover:bg-[#e63946]/20 group-hover:text-[#e63946]">{count}</span>
+                  <span className="rounded bg-gray-100 px-1.5 text-xs font-bold text-gray-600 group-hover:bg-[#e63946]/20 group-hover:text-[#e63946]">
+                    {count}
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
         </div>
         <div>
-          <div className="text-gray-600 mb-2 font-medium text-xs uppercase tracking-wider">Top Brands</div>
+          <div className="mb-2 text-xs uppercase tracking-wider text-gray-700">Top Brands</div>
           <ul className="space-y-2">
             {topBrands.map(([brand, count]) => (
               <li key={brand}>
-                <button onClick={() => onSelect(brand)} className="text-gray-700 hover:text-gray-900 flex items-center justify-between w-full group">
+                <button
+                  type="button"
+                  onClick={() => onSelect(brand)}
+                  className="group flex w-full items-center justify-between text-gray-800 hover:text-[#0a0a0a]"
+                >
                   <span>{brand}</span>
-                  <span className="text-gray-500 text-xs bg-gray-100 px-1.5 rounded group-hover:bg-[#e63946]/20 group-hover:text-[#e63946]">{count}</span>
+                  <span className="rounded bg-gray-100 px-1.5 text-xs font-bold text-gray-600 group-hover:bg-[#e63946]/20 group-hover:text-[#e63946]">
+                    {count}
+                  </span>
                 </button>
               </li>
             ))}

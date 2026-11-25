@@ -110,7 +110,13 @@ export async function sendMetaEvents(events) {
   const pixelId = process.env.META_PIXEL_ID?.trim();
   const accessToken = process.env.META_CAPI_ACCESS_TOKEN?.trim();
   if (!pixelId || !accessToken || !Array.isArray(events) || events.length === 0) {
-    return { skipped: true };
+    if (process.env.NODE_ENV !== 'production') {
+      const missing = [!pixelId && 'META_PIXEL_ID', !accessToken && 'META_CAPI_ACCESS_TOKEN'].filter(Boolean);
+      if (missing.length) {
+        console.warn(`Meta CAPI skipped (missing ${missing.join(', ')})`);
+      }
+    }
+    return { skipped: true, reason: 'not_configured' };
   }
 
   const apiVersion = process.env.META_GRAPH_API_VERSION?.trim() || 'v21.0';

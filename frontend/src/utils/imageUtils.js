@@ -1,4 +1,5 @@
 import { applyCloudinaryDeliveryUrl } from '@/config/cloudinaryDelivery';
+import { isVideoUrl } from '@/utils/mediaUtils';
 
 const getUrlValue = (value) => {
   if (!value) return '';
@@ -29,7 +30,7 @@ export const getProductImageCandidates = (product = {}) => {
     ? product.galleryImages.map(sanitizeImageUrl).filter(Boolean)
     : [];
 
-  return [...new Set([primary, ...gallery].filter(Boolean))];
+  return [...new Set([primary, ...gallery].filter(Boolean))].filter((url) => !isVideoUrl(url));
 };
 
 export const getProductImage = (product = {}) => {

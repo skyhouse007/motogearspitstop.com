@@ -9,8 +9,8 @@ import { SlidersHorizontal, X, PackageSearch, ArrowUpRight } from 'lucide-react'
 import ProductCard from '@/components/ProductCard';
 import FilterPanel from '@/components/FilterPanel';
 import SearchResultsHeader from '@/components/SearchResultsHeader';
-import { products } from '@/data/products';
 import { combineFilters, productMatchesBike, sortProducts } from '@/utils/searchUtils';
+import { useMergedCatalogProducts } from '@/hooks/useMergedCatalogProducts';
 
 const ProductSkeleton = () => (
   <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white animate-pulse">
@@ -28,6 +28,7 @@ const ProductSkeleton = () => (
 );
 
 const ProductListing = () => {
+  const products = useMergedCatalogProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [sortBy, setSortBy] = useState('popular');

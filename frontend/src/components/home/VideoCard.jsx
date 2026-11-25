@@ -64,9 +64,14 @@ const VideoCard = ({ video }) => {
       )}
 
       {/* Category Badge */}
-      <div className="absolute top-3 right-3 z-10">
+      <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-1">
+        {video.source === 'instagram' && (
+          <span className="rounded bg-gradient-to-r from-purple-600 to-pink-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
+            Reel
+          </span>
+        )}
         <span className="bg-white/90 backdrop-blur-md text-gray-900 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded shadow-sm">
-          {video.category.replace('-', ' ')}
+          {(video.category || 'video').replace('-', ' ')}
         </span>
       </div>
 

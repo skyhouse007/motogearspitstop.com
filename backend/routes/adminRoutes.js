@@ -16,6 +16,12 @@ import {
 } from '../controllers/adminController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { adminOnly } from '../middleware/adminMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
+import {
+  getCatalogProductAdmin,
+  upsertCatalogProduct,
+  patchCatalogProductStock,
+} from '../controllers/catalogProductController.js';
 
 const router = express.Router();
 
@@ -40,5 +46,10 @@ router.delete('/orders/:id', deleteOrder);
 // Products
 router.get('/products', getAllProductsAdmin);
 router.put('/products/:id/stock', updateStock);
+
+// Static catalog (products.js) overrides + Cloudinary media
+router.get('/catalog-products/:catalogId', getCatalogProductAdmin);
+router.put('/catalog-products/:catalogId', upload.array('images', 10), upsertCatalogProduct);
+router.patch('/catalog-products/:catalogId/stock', patchCatalogProductStock);
 
 export default router;
