@@ -26,7 +26,15 @@ export const createMetaEventId = () => {
 };
 
 export const initMetaPixel = () => {
-  if (initialized || !PIXEL_ID || typeof window === 'undefined') return;
+  if (initialized || typeof window === 'undefined') return;
+
+  // Base snippet in index.html (Meta setup wizard); avoid double init / PageView.
+  if (window.fbq) {
+    initialized = true;
+    return;
+  }
+
+  if (!PIXEL_ID) return;
   initialized = true;
 
   /* eslint-disable */
@@ -88,7 +96,7 @@ export const trackMetaEvent = (eventName, customData = {}, options = {}) => {
   const eventId = options.eventId || createMetaEventId();
   const eventSourceUrl = options.eventSourceUrl || (typeof window !== 'undefined' ? window.location.href : '');
 
-  if (PIXEL_ID && window.fbq) {
+  if (window.fbq) {
     const pixelOptions = { eventID: options.eventId || eventId };
     window.fbq('track', eventName, customData, pixelOptions);
   }
