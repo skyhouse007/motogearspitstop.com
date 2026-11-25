@@ -6,6 +6,9 @@ export const SUPPORT_WHATSAPP_NUMBER = '916361911949';
 export const INSTAGRAM_URL = 'https://www.instagram.com/motogearpitstop/';
 export const INSTAGRAM_FOLLOW_LABEL = 'Follow';
 
+/** Set `VITE_FACEBOOK_URL` in `.env` (see `.env.example`) */
+export const FACEBOOK_URL = SOCIAL_PROFILES.facebook;
+
 /** Set `VITE_YOUTUBE_URL` in `.env` (see `.env.example`) */
 export const YOUTUBE_URL = SOCIAL_PROFILES.youtube;
 

@@ -498,7 +498,7 @@ const Checkout = () => {
     city: '',
     state: '',
     pincode: '',
-    paymentMethod: 'razorpay'
+    paymentMethod: ''
   });
 
   useEffect(() => {
@@ -648,6 +648,18 @@ const Checkout = () => {
       toast({
         title: 'Please wait',
         description: 'Fetching city and state for your pincode…',
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep2 = () => {
+    if (formData.paymentMethod !== 'cod' && formData.paymentMethod !== 'razorpay') {
+      toast({
+        title: 'Select payment method',
+        description: 'Choose Cash on Delivery or Pay Full Amount Online to continue.',
+        variant: 'destructive',
       });
       return false;
     }
@@ -813,6 +825,7 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     if (loading) return;
+    if (!validateStep2()) return;
 
     await handleRazorpayPayment();
   };
@@ -960,10 +973,10 @@ const Checkout = () => {
                     const selected = formData.paymentMethod === value;
                     return (
                     <label key={value}
-                      className={`relative flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      className={`relative flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all bg-[#0a0a0a] text-white ${
                         selected
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : 'border-gray-200 bg-white hover:border-blue-200'
+                          ? 'border-[#e63946] shadow-[0_0_0_1px_rgba(230,57,70,0.35)]'
+                          : 'border-[#2a2a2a] hover:border-gray-500'
                       }`}>
                       <input
                         type="radio"
@@ -971,20 +984,18 @@ const Checkout = () => {
                         value={value}
                         checked={selected}
                         onChange={handleInputChange}
-                        className={`relative z-[1] h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border-2 bg-white shadow-sm ${
+                        className={`relative z-[1] h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border-2 bg-transparent shadow-sm ${
                           selected
-                            ? 'border-white checked:border-white checked:bg-white'
-                            : 'border-blue-600 checked:border-blue-600 checked:bg-blue-600'
+                            ? 'border-[#e63946] checked:border-[#e63946] checked:bg-[#e63946]'
+                            : 'border-gray-500 checked:border-[#e63946] checked:bg-[#e63946]'
                         }`}
                       />
-                      <span className={`relative z-[1] flex min-w-0 flex-1 flex-col gap-0.5 ${selected ? 'text-white' : 'text-gray-900'}`}>
+                      <span className="relative z-[1] flex min-w-0 flex-1 flex-col gap-0.5 text-white">
                         <span className="text-sm font-bold uppercase leading-snug tracking-wide sm:text-base">
                           {label}
                         </span>
                         {highlight && (
-                          <span className={`text-xs font-semibold uppercase tracking-wide ${
-                            selected ? 'text-emerald-300' : 'text-emerald-700'
-                          }`}>
+                          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-400">
                             {highlight}
                           </span>
                         )}
@@ -1010,7 +1021,7 @@ const Checkout = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setStep(3)}
+                    onClick={() => validateStep2() && setStep(3)}
                     className="flex-1 bg-[#e63946] px-6 py-3 font-bold text-white transition-colors hover:bg-[#d62839] rounded-lg"
                   >
                     Review Order
@@ -1037,7 +1048,11 @@ const Checkout = () => {
                   <div>
                     <h3 className="text-gray-900 font-medium mb-2">Payment</h3>
                     <p className="text-gray-600 text-sm">
-                      {formData.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (Razorpay)'}
+                      {formData.paymentMethod === 'cod'
+                        ? 'Cash on Delivery'
+                        : formData.paymentMethod === 'razorpay'
+                          ? 'Online Payment (Razorpay)'
+                          : '—'}
                     </p>
                     {formData.paymentMethod === 'cod' && (
                       <div className="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
@@ -1167,13 +1182,13 @@ const Checkout = () => {
                     <span className="font-bold">-{formatINR(firstPurchaseDiscount)}</span>
                   </div>
                 )}
-                {formData.paymentMethod === 'razorpay' && onlinePaymentDiscount > 0 && (
+                {step >= 2 && formData.paymentMethod === 'razorpay' && onlinePaymentDiscount > 0 && (
                   <div className="flex justify-between gap-4 text-green-700">
                     <span>Online payment offer</span>
                     <span className="font-bold">-{formatINR(onlinePaymentDiscount)}</span>
                   </div>
                 )}
-                {formData.paymentMethod === 'cod' ? (
+                {step >= 2 && formData.paymentMethod === 'cod' ? (
                   <div className="rounded-xl border border-[#FDE047] bg-white py-1 pl-3 pr-1 sm:pl-4 sm:pr-2">
                     <div className="divide-y divide-[#FDE047]/50">
                       <div className="flex items-center justify-between gap-2 py-3 text-lg font-bold text-[#0a0a0a]">

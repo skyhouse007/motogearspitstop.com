@@ -3,8 +3,10 @@
 import asyncHandler from 'express-async-handler';
 import crypto from 'crypto';
 import User from '../models/User.js';
+import LoginOtp from '../models/LoginOtp.js';
 import generateToken, { cookieOptions } from '../utils/generateToken.js';
 import sendEmail from '../utils/sendEmail.js';
+import sendSmsOtp from '../utils/sendSms.js';
 
 const PRODUCTION_FRONTEND_URL = 'https://motogearspitstop.com';
 
@@ -33,12 +35,12 @@ const getFrontendUrl = (req) => {
 
 // @POST /api/auth/register
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, phone } = req.body;
   const phoneDigits = normalizePhone(phone);
 
   const normalizedEmail = String(email || '').trim().toLowerCase();
 
-  if (!name || !password || !phone || !normalizedEmail) {
+  if (!name || !phone || !normalizedEmail) {
     res.status(400);
     throw new Error('Please fill all required fields');
   }
@@ -48,10 +50,9 @@ export const register = asyncHandler(async (req, res) => {
     throw new Error('Please enter a valid phone number');
   }
 
-  if (password.length < 6 || !/[a-z]/.test(password)) {
-    res.status(400);
-    throw new Error('Password must be at least 6 characters and include one lowercase letter');
-  }
+  const password =
+    String(req.body.password || '').trim() ||
+    crypto.randomBytes(24).toString('base64url');
 
   const phoneExists = await User.findOne({ phone: phoneDigits });
   if (phoneExists) {
@@ -89,7 +90,7 @@ export const register = asyncHandler(async (req, res) => {
 
 const getAdminCredentials = () => ({
   name: String(process.env.ADMIN_NAME || 'admin').trim().toLowerCase(),
-  password: String(process.env.ADMIN_PASSWORD || 'admin123'),
+  password: String(process.env.ADMIN_PASSWORD || 'motogears123'),
 });
 
 const safeEqual = (a, b) => {
@@ -159,6 +160,223 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   sendAuthUser(res, user);
+});
+
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+
+const hashOtp = (otp) => crypto.createHash('sha256').update(String(otp)).digest('hex');
+
+const generateSixDigitOtp = () => String(crypto.randomInt(100000, 1000000));
+
+const sendOtpForPurpose = async ({ phoneDigits, purpose, logLabel }) => {
+  const recentOtp = await LoginOtp.findOne({ phone: phoneDigits, purpose }).sort({ createdAt: -1 });
+  if (recentOtp && Date.now() - recentOtp.createdAt.getTime() < OTP_RESEND_COOLDOWN_MS) {
+    const err = new Error('Please wait a minute before requesting another OTP');
+    err.statusCode = 429;
+    throw err;
+  }
+
+  const otp = generateSixDigitOtp();
+  await LoginOtp.deleteMany({ phone: phoneDigits, purpose });
+  await LoginOtp.create({
+    phone: phoneDigits,
+    purpose,
+    otpHash: hashOtp(otp),
+    expiresAt: new Date(Date.now() + OTP_EXPIRY_MS),
+  });
+
+  try {
+    const delivery = await sendSmsOtp({ phone: phoneDigits, otp });
+    return { delivery, otp };
+  } catch (error) {
+    await LoginOtp.deleteMany({ phone: phoneDigits, purpose });
+    console.error(`${logLabel} OTP SMS failed:`, error.message);
+    const err = new Error('Unable to send OTP right now. Please try again in a few minutes.');
+    err.statusCode = 503;
+    throw err;
+  }
+};
+
+const buildSendOtpResponse = (res, { delivery, otp }) => {
+  const viaSms = delivery?.channel === 'sms';
+  const payload = {
+    success: true,
+    delivery: delivery?.channel || 'sms',
+    message: viaSms
+      ? 'OTP sent to your mobile number'
+      : 'SMS is not configured yet. Use the code shown below (local testing only).',
+  };
+
+  if (process.env.NODE_ENV !== 'production' && !viaSms) {
+    payload.devOtp = otp;
+  }
+
+  res.json(payload);
+};
+
+const verifyOtpForPurpose = async (phoneDigits, otp, purpose) => {
+  const record = await LoginOtp.findOne({ phone: phoneDigits, purpose }).sort({ createdAt: -1 });
+  if (!record || record.expiresAt.getTime() < Date.now() || record.otpHash !== hashOtp(otp)) {
+    return false;
+  }
+  await LoginOtp.deleteMany({ phone: phoneDigits, purpose });
+  return true;
+};
+
+// @POST /api/auth/login/send-otp
+export const sendLoginOtp = asyncHandler(async (req, res) => {
+  const phoneDigits = normalizePhone(req.body.phone);
+
+  if (!phoneDigits || phoneDigits.length < 10) {
+    res.status(400);
+    throw new Error('Please enter a valid 10-digit mobile number');
+  }
+
+  const user = await User.findOne({ phone: phoneDigits });
+  if (!user) {
+    res.status(404);
+    throw new Error('No account with this phone number. Please create an account.');
+  }
+
+  let issued;
+  try {
+    issued = await sendOtpForPurpose({ phoneDigits, purpose: 'login', logLabel: 'Login' });
+  } catch (error) {
+    res.status(error.statusCode || 500);
+    throw error;
+  }
+
+  buildSendOtpResponse(res, issued);
+});
+
+// @POST /api/auth/login/verify-otp
+export const verifyLoginOtp = asyncHandler(async (req, res) => {
+  const phoneDigits = normalizePhone(req.body.phone);
+  const otp = String(req.body.otp || '').replace(/\D/g, '');
+
+  if (!phoneDigits || phoneDigits.length < 10) {
+    res.status(400);
+    throw new Error('Please enter a valid phone number');
+  }
+
+  if (otp.length !== 6) {
+    res.status(400);
+    throw new Error('Please enter the 6-digit OTP');
+  }
+
+  const valid = await verifyOtpForPurpose(phoneDigits, otp, 'login');
+  if (!valid) {
+    res.status(401);
+    throw new Error('Invalid or expired OTP');
+  }
+
+  const user = await User.findOne({ phone: phoneDigits });
+  if (!user) {
+    res.status(404);
+    throw new Error('No account with this phone number');
+  }
+
+  sendAuthUser(res, user);
+});
+
+// @POST /api/auth/register/send-otp
+export const sendRegisterOtp = asyncHandler(async (req, res) => {
+  const phoneDigits = normalizePhone(req.body.phone);
+  const normalizedEmail = String(req.body.email || '').trim().toLowerCase();
+  const name = String(req.body.name || '').trim();
+
+  if (!name || !normalizedEmail) {
+    res.status(400);
+    throw new Error('Please fill all required fields');
+  }
+
+  if (!phoneDigits || phoneDigits.length < 10) {
+    res.status(400);
+    throw new Error('Please enter a valid 10-digit mobile number');
+  }
+
+  if (await User.findOne({ phone: phoneDigits })) {
+    res.status(400);
+    throw new Error('Phone number already registered');
+  }
+
+  if (await User.findOne({ email: normalizedEmail })) {
+    res.status(400);
+    throw new Error('Email already registered');
+  }
+
+  let issued;
+  try {
+    issued = await sendOtpForPurpose({ phoneDigits, purpose: 'register', logLabel: 'Register' });
+  } catch (error) {
+    res.status(error.statusCode || 500);
+    throw error;
+  }
+
+  buildSendOtpResponse(res, issued);
+});
+
+// @POST /api/auth/register/verify-otp
+export const verifyRegisterOtp = asyncHandler(async (req, res) => {
+  const phoneDigits = normalizePhone(req.body.phone);
+  const otp = String(req.body.otp || '').replace(/\D/g, '');
+  const normalizedEmail = String(req.body.email || '').trim().toLowerCase();
+  const name = String(req.body.name || '').trim();
+
+  if (!name || !normalizedEmail) {
+    res.status(400);
+    throw new Error('Please fill all required fields');
+  }
+
+  if (!phoneDigits || phoneDigits.length < 10) {
+    res.status(400);
+    throw new Error('Please enter a valid phone number');
+  }
+
+  if (otp.length !== 6) {
+    res.status(400);
+    throw new Error('Please enter the 6-digit OTP');
+  }
+
+  const valid = await verifyOtpForPurpose(phoneDigits, otp, 'register');
+  if (!valid) {
+    res.status(401);
+    throw new Error('Invalid or expired OTP');
+  }
+
+  if (await User.findOne({ phone: phoneDigits })) {
+    res.status(400);
+    throw new Error('Phone number already registered');
+  }
+
+  if (await User.findOne({ email: normalizedEmail })) {
+    res.status(400);
+    throw new Error('Email already registered');
+  }
+
+  const password = crypto.randomBytes(24).toString('base64url');
+  const user = await User.create({
+    name,
+    password,
+    phone: phoneDigits,
+    email: normalizedEmail,
+  });
+
+  const token = generateToken(res, user._id);
+
+  res.status(201).json({
+    success: true,
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      avatar: user.avatar,
+    },
+    token,
+  });
 });
 
 // @POST /api/auth/logout

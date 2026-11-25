@@ -1,13 +1,14 @@
 //frontend/src/pages/admin/AdminLayout.jsx
 
-import React from 'react';
-import { Link, Navigate, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, ShoppingBag, Package,
   BarChart2, LogOut, Menu, X
 } from 'lucide-react';
-import { useState } from 'react';
 import useAuthStore from '@/store/authStore';
+import AdminLogin from '@/pages/admin/AdminLogin';
+import { Toaster } from '@/components/ui/toaster';
 
 const navItems = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -18,22 +19,51 @@ const navItems = [
 ];
 
 export default function AdminLayout() {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, getMe, token } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [authReady, setAuthReady] = useState(!token);
+
+  useEffect(() => {
+    let active = true;
+    const finish = () => {
+      if (active) setAuthReady(true);
+    };
+
+    if (!token) {
+      finish();
+      return () => {
+        active = false;
+      };
+    }
+
+    getMe().finally(finish);
+    return () => {
+      active = false;
+    };
+  }, [getMe, token]);
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate('/admin', { replace: true });
   };
 
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-gray-400">
+        Loading…
+      </div>
+    );
+  }
+
   if (!isAuthenticated || user?.role !== 'admin') {
-    return <Navigate to="/" replace />;
+    return <AdminLogin />;
   }
 
   return (
     <div className="min-h-screen bg-gray-950 flex">
+      <Toaster />
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-300 fixed h-full z-40`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-800">

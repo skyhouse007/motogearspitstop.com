@@ -40,6 +40,7 @@ export const BUSINESS_HOURS_TEXT = {
 
 export const SOCIAL_PROFILES = {
   instagram: 'https://www.instagram.com/motogearpitstop/',
+  facebook: (import.meta.env.VITE_FACEBOOK_URL || '').trim(),
   youtube: (import.meta.env.VITE_YOUTUBE_URL || '').trim(),
 };
 

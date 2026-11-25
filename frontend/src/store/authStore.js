@@ -50,6 +50,72 @@ export const useAuthStore = create(
         }
       },
 
+      sendLoginOtp: async (phone) => {
+        set({ loading: true, error: null });
+        try {
+          const res = await api.post('/auth/login/send-otp', { phone });
+          set({ loading: false });
+          return {
+            success: true,
+            delivery: res.data.delivery,
+            devOtp: res.data.devOtp,
+            message: res.data.message,
+          };
+        } catch (err) {
+          const message = err.response?.data?.message || 'Failed to send OTP';
+          set({ error: message, loading: false });
+          return { success: false, message };
+        }
+      },
+
+      verifyLoginOtp: async ({ phone, otp }) => {
+        set({ loading: true, error: null });
+        try {
+          const res = await api.post('/auth/login/verify-otp', { phone, otp });
+          const token = res.data.token || null;
+          setApiToken(token);
+          set({ user: res.data.user, token, isAuthenticated: true, loading: false });
+          return { success: true };
+        } catch (err) {
+          const message = err.response?.data?.message || 'OTP verification failed';
+          set({ error: message, loading: false });
+          return { success: false, message };
+        }
+      },
+
+      sendRegisterOtp: async ({ name, phone, email }) => {
+        set({ loading: true, error: null });
+        try {
+          const res = await api.post('/auth/register/send-otp', { name, phone, email });
+          set({ loading: false });
+          return {
+            success: true,
+            delivery: res.data.delivery,
+            devOtp: res.data.devOtp,
+            message: res.data.message,
+          };
+        } catch (err) {
+          const message = err.response?.data?.message || 'Failed to send OTP';
+          set({ error: message, loading: false });
+          return { success: false, message };
+        }
+      },
+
+      verifyRegisterOtp: async ({ name, phone, email, otp }) => {
+        set({ loading: true, error: null });
+        try {
+          const res = await api.post('/auth/register/verify-otp', { name, phone, email, otp });
+          const token = res.data.token || null;
+          setApiToken(token);
+          set({ user: res.data.user, token, isAuthenticated: true, loading: false });
+          return { success: true };
+        } catch (err) {
+          const message = err.response?.data?.message || 'Registration failed';
+          set({ error: message, loading: false });
+          return { success: false, message };
+        }
+      },
+
       logout: async () => {
         try {
           await api.post('/auth/logout');
