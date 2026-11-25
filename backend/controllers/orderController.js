@@ -160,6 +160,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     paymentInfo = {},
     paymentMethod = 'cod',
     items: clientItems = [],
+    paidAmount: paidAmountFromClient,
     metaTracking = {},
   } = req.body;
 
@@ -169,29 +170,31 @@ export const createOrder = asyncHandler(async (req, res) => {
     : null;
   let items = [];
 
-  if (cart?.items?.length) {
-    items = cart.items
-      .filter(i => i.product)
-      .map(i => ({
-        product: i.product._id,
-        name: i.product.name,
-        image: i.product.images[0]?.url || '',
-        price: i.price,
-        quantity: i.quantity
-      }));
-  }
-
-  if (items.length === 0 && Array.isArray(clientItems)) {
-    items = clientItems
-      .map(i => ({
+  const mapClientItems = (list) =>
+    list
+      .map((i) => ({
         product: i.productId && /^[0-9a-fA-F]{24}$/.test(String(i.productId)) ? i.productId : undefined,
         externalProductId: i.productId ? String(i.productId) : undefined,
         name: String(i.name || 'Product'),
         image: String(i.image || ''),
         price: Number(i.price || 0),
-        quantity: Number(i.quantity || 0)
+        quantity: Number(i.quantity || 0),
       }))
-      .filter(i => i.name && i.price >= 0 && i.quantity > 0);
+      .filter((i) => i.name && i.price >= 0 && i.quantity > 0);
+
+  // Checkout sends what the customer saw and paid for; DB cart can be stale or priced differently.
+  if (Array.isArray(clientItems) && clientItems.length > 0) {
+    items = mapClientItems(clientItems);
+  } else if (cart?.items?.length) {
+    items = cart.items
+      .filter((i) => i.product)
+      .map((i) => ({
+        product: i.product._id,
+        name: i.product.name,
+        image: i.product.images[0]?.url || '',
+        price: i.price,
+        quantity: i.quantity,
+      }));
   }
 
   if (items.length === 0) {
@@ -211,18 +214,42 @@ export const createOrder = asyncHandler(async (req, res) => {
   const afterFirstPurchase = Math.max(billBeforeDiscount - firstPurchaseDiscount, 0);
   const onlinePaymentDiscount = calculateOnlinePaymentDiscount(paymentMethod, afterFirstPurchase);
   const totalPrice = Math.max(afterFirstPurchase - onlinePaymentDiscount, 0);
-  const paymentBreakup = calculatePaymentBreakup(paymentMethod, totalPrice);
+  let paymentBreakup = calculatePaymentBreakup(paymentMethod, totalPrice);
 
   if (paymentBreakup.amountPaid > 0 && !paymentInfo?.razorpay_payment_id) {
     res.status(400);
     throw new Error('Advance payment is required before placing this order');
   }
 
+  const collectedAmount = Math.round(Number(paidAmountFromClient));
+  if (paymentInfo?.razorpay_payment_id && Number.isFinite(collectedAmount) && collectedAmount > 0) {
+    if (collectedAmount > totalPrice) {
+      res.status(400);
+      throw new Error('Paid amount exceeds order total');
+    }
+    paymentBreakup = {
+      ...paymentBreakup,
+      amountPaid: collectedAmount,
+      amountDue: Math.max(totalPrice - collectedAmount, 0),
+      paymentStatus:
+        paymentMethod === 'cod'
+          ? (collectedAmount >= totalPrice ? 'paid' : 'partial')
+          : (collectedAmount >= totalPrice ? 'paid' : 'partial'),
+    };
+  }
+
+  const storedPaymentInfo = {
+    ...paymentInfo,
+    ...(Number.isFinite(collectedAmount) && collectedAmount > 0
+      ? { collectedAmount }
+      : {}),
+  };
+
   const order = await Order.create({
     ...(userId ? { user: userId } : {}),
     items,
     shippingAddress,
-    paymentInfo,
+    paymentInfo: storedPaymentInfo,
     paymentMethod,
     paymentStatus: paymentBreakup.paymentStatus,
     itemsPrice,
@@ -236,15 +263,13 @@ export const createOrder = asyncHandler(async (req, res) => {
     paidAt: paymentBreakup.amountPaid > 0 ? Date.now() : undefined
   });
 
-  // Update stock for Mongo-backed cart items. Static frontend items do not have Product documents.
-  if (cart?.items?.length) {
-    for (const item of cart.items) {
-      if (!item.product?._id) continue;
-      await Product.findByIdAndUpdate(item.product._id, {
-        $inc: { stock: -item.quantity, sold: item.quantity }
-      });
-    }
-
+  for (const item of items) {
+    if (!item.product) continue;
+    await Product.findByIdAndUpdate(item.product, {
+      $inc: { stock: -item.quantity, sold: item.quantity },
+    });
+  }
+  if (userId) {
     await Cart.findOneAndDelete({ user: userId });
   }
 

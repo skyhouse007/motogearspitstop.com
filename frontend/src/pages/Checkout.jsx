@@ -727,7 +727,7 @@ const Checkout = () => {
                 zip: formData.pincode,
               },
             });
-            await placeOrder(response);
+            await placeOrder(response, paymentAmount);
           } else {
             toast({ title: 'Payment Failed', description: 'Verification failed', variant: 'destructive' });
             setLoading(false);
@@ -768,7 +768,7 @@ const Checkout = () => {
     rzp.open();
   };
 
-  const placeOrder = async (paymentInfo = null) => {
+  const placeOrder = async (paymentInfo = null, amountCollected = paymentAmount) => {
     setLoading(true);
     const purchaseEventId = createMetaEventId();
     const { fbp, fbc } = getMetaBrowserIds();
@@ -792,6 +792,7 @@ const Checkout = () => {
       },
       paymentInfo: paymentInfo || {},
       paymentMethod: formData.paymentMethod,
+      paidAmount: Math.round(Number(amountCollected)),
       metaTracking: {
         eventId: purchaseEventId,
         eventSourceUrl: window.location.href,
