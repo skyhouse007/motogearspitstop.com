@@ -163,11 +163,11 @@ export default function AdminOrders() {
       </div>
 
       <div className="space-y-3">
-        {loading ? (
+              {loading ? (
           <div className="rounded-xl border border-gray-800 bg-gray-900 px-4 py-12 text-center text-gray-500">
             Loading…
           </div>
-        ) : orders.length === 0 ? (
+              ) : orders.length === 0 ? (
           <div className="rounded-xl border border-gray-800 bg-gray-900 px-4 py-12 text-center text-gray-500">
             No orders found
           </div>
@@ -317,7 +317,7 @@ export default function AdminOrders() {
                                 <tr>
                                   <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
                                     No line items
-                                  </td>
+                  </td>
                                 </tr>
                               ) : (
                                 (order.items || []).map((item, index) => {
@@ -344,7 +344,7 @@ export default function AdminOrders() {
                                             ) : null}
                                           </div>
                                         </OrderItemProductLink>
-                                      </td>
+                  </td>
                                       <td className="px-3 py-3 text-right text-gray-300">{formatINR(item.price)}</td>
                                       <td className="px-3 py-3 text-right text-gray-300">{item.quantity}</td>
                                       <td className="px-3 py-3 text-right font-semibold text-white">{formatINR(lineTotal)}</td>
@@ -445,18 +445,18 @@ export default function AdminOrders() {
 
                     <div className="flex flex-wrap items-center gap-3 border-t border-gray-800 pt-4">
                       <label className="text-sm text-gray-400">Update status</label>
-                      <select
-                        value={order.orderStatus}
-                        disabled={updating === order._id}
+                    <select
+                      value={order.orderStatus}
+                      disabled={updating === order._id}
                         onChange={(e) => updateStatus(order._id, e.target.value)}
                         className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="processing">Processing</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
+                    >
+                      <option value="processing">Processing</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
                     </div>
                   </div>
                 )}
@@ -464,7 +464,7 @@ export default function AdminOrders() {
             );
           })
         )}
-      </div>
+        </div>
 
       {!loading && orders.length > 0 && (
         <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-800 bg-gray-900 px-4 py-3">

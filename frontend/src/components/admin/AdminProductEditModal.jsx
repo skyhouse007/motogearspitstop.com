@@ -135,10 +135,15 @@ export default function AdminProductEditModal({ product, open, onOpenChange, onS
       onSaved?.(saved);
       onOpenChange(false);
     } catch (err) {
-      const message =
+      const raw =
         err.response?.data?.message ||
         err.message ||
-        'Could not save product. Check Cloudinary env on the server.';
+        'Could not save product.';
+      const message = /imagekit/i.test(raw)
+        ? raw
+        : /unknown api key|invalid api key|cloudinary/i.test(raw)
+          ? 'Server media keys are missing. For new uploads set IMAGEKIT_PUBLIC_KEY, IMAGEKIT_PRIVATE_KEY, and IMAGEKIT_URL_ENDPOINT in backend/.env (ImageKit → Developer options), then restart the API.'
+          : raw;
       toast({ title: 'Save failed', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -242,8 +247,9 @@ export default function AdminProductEditModal({ product, open, onOpenChange, onS
             <div>
               <p className="mb-2 text-sm font-medium text-gray-300">Photos &amp; videos</p>
               <p className="mb-3 text-xs text-gray-500">
-                Photos and MP4/WebM uploads go to your existing Cloudinary account. Tap a photo to set the cover
-                (videos are gallery-only). X removes an admin upload on save.
+                Older catalog URLs stay on Cloudinary/ImageKit as they are. New uploads from today go to ImageKit in the
+                <span className="font-medium text-gray-300"> motogear </span>
+                folder. Tap a photo for cover; videos are gallery-only.
               </p>
               <div className="flex flex-wrap gap-3">
                 {keptImages.map((url) => (

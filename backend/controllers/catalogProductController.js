@@ -1,6 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import CatalogProduct from '../models/CatalogProduct.js';
-import { uploadToCloudinary } from '../middleware/uploadMiddleware.js';
+import { isImageKitConfigured, uploadToImageKit } from '../services/imagekitUpload.js';
 
 const parseGalleryKeepList = (raw) => {
   if (!raw) return [];
@@ -13,15 +13,18 @@ const parseGalleryKeepList = (raw) => {
 };
 
 const isVideoUrl = (url) =>
-  /\/video\/upload\/|\.(mp4|webm|mov|m4v)(\?|$)/i.test(String(url || ''));
+  /\/video\/upload\/|ik\.imagekit\.io\/.*\.(mp4|webm|mov|m4v)(\?|\/|$)|\.(mp4|webm|mov|m4v)(\?|$)/i.test(
+    String(url || ''),
+  );
 
 const isVideoFile = (file) => Boolean(file?.mimetype?.startsWith('video/'));
 
-const ensureCloudinaryConfigured = (res) => {
-  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
-  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+const ensureImageKitConfigured = (res) => {
+  if (!isImageKitConfigured()) {
     res.status(503);
-    throw new Error('Cloudinary is not configured on the server (CLOUDINARY_* env vars)');
+    throw new Error(
+      'ImageKit keys are missing or incomplete in backend/.env. Copy the full Public key, Private key (long string), and URL endpoint from ImageKit → Developer options, then restart the server.',
+    );
   }
 };
 
@@ -51,19 +54,17 @@ export const upsertCatalogProduct = asyncHandler(async (req, res) => {
 
   let uploadedAssets = [];
   if (files.length > 0) {
-    ensureCloudinaryConfigured(res);
+    ensureImageKitConfigured(res);
     const stamp = Date.now();
     uploadedAssets = await Promise.all(
-      files.map((file, index) => {
-        const isVideo = isVideoFile(file);
-        const publicId = isVideo
-          ? `productv${catalogId}_${stamp}_${index + 1}`
-          : `galleryp${catalogId}_${stamp}_${index + 1}`;
-        return uploadToCloudinary(file, {
-          public_id: publicId,
-          resource_type: isVideo ? 'video' : 'image',
-        });
-      }),
+      files.map((file, index) =>
+        uploadToImageKit(file, {
+          catalogId,
+          index,
+          stamp,
+          isVideo: isVideoFile(file),
+        }),
+      ),
     );
   }
 
@@ -127,9 +128,10 @@ export const upsertCatalogProduct = asyncHandler(async (req, res) => {
       payload.additionalVideos = [...new Set([...(existing?.additionalVideos || []), ...newVideoUrls])];
     }
   }
-  const mergedAssets = [
-    ...(existing?.cloudinaryAssets || []),
-    ...uploadedAssets.map(({ public_id, url }) => ({ public_id, url })),
+
+  const mergedImageKitAssets = [
+    ...(existing?.imagekitAssets || []),
+    ...uploadedAssets.map(({ fileId, url, filePath }) => ({ fileId, url, filePath })),
   ];
 
   const product = await CatalogProduct.findOneAndUpdate(
@@ -137,7 +139,7 @@ export const upsertCatalogProduct = asyncHandler(async (req, res) => {
     {
       $set: {
         ...Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)),
-        ...(mergedAssets.length ? { cloudinaryAssets: mergedAssets } : {}),
+        ...(mergedImageKitAssets.length ? { imagekitAssets: mergedImageKitAssets } : {}),
       },
     },
     { new: true, upsert: true, setDefaultsOnInsert: true },

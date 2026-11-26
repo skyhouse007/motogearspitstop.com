@@ -62,7 +62,9 @@ const VideoModal = () => {
             {/* Video Container */}
             <div
               className={`relative w-full bg-black ${
-                activeVideo.source === 'instagram' ? 'aspect-[9/16] max-h-[80vh] mx-auto' : 'aspect-video'
+                activeVideo.source === 'instagram' || activeVideo.source === 'product'
+                  ? 'aspect-[9/16] max-h-[80vh] max-w-md mx-auto w-full'
+                  : 'aspect-video'
               }`}
             >
               {activeVideo.videoUrl && !activeVideo.videoUrl.includes('youtube.com/embed') ? (

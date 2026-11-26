@@ -1,4 +1,5 @@
-const VIDEO_URL_PATTERN = /\/video\/upload\/|\.(mp4|webm|mov|m4v)(\?|$)/i;
+const VIDEO_URL_PATTERN =
+  /\/video\/upload\/|ik\.imagekit\.io\/.*\.(mp4|webm|mov|m4v)(\?|\/|$)|\.(mp4|webm|mov|m4v)(\?|$)/i;
 
 export const isVideoUrl = (url = '') => {
   const value = String(url).trim();

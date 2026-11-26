@@ -280,7 +280,11 @@ const ProductDetail = () => {
                   fallbackImage={productImage}
                 />
               )}
-              <ProductVideoGallery videos={productVideos} productName={product.name} />
+              <ProductVideoGallery
+                videos={productVideos}
+                productName={product.name}
+                poster={productImage}
+              />
             </div>
 
             {/* Details */}

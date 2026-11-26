@@ -8,6 +8,15 @@ const cloudinaryAssetSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const imagekitAssetSchema = new mongoose.Schema(
+  {
+    fileId: String,
+    url: String,
+    filePath: String,
+  },
+  { _id: false },
+);
+
 const catalogProductSchema = new mongoose.Schema(
   {
     catalogId: { type: String, required: true, unique: true, index: true },
@@ -24,7 +33,10 @@ const catalogProductSchema = new mongoose.Schema(
     /** New admin uploads only — merged on top of products.js images on the storefront */
     additionalGalleryImages: [String],
     additionalVideos: [String],
+    /** Legacy admin uploads on Cloudinary — left as-is */
     cloudinaryAssets: [cloudinaryAssetSchema],
+    /** New admin uploads on ImageKit (motogear folder) */
+    imagekitAssets: [imagekitAssetSchema],
   },
   { timestamps: true },
 );
