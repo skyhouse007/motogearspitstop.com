@@ -1,11 +1,8 @@
 // frontend/src/pages/Cart.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, ShoppingBag, Trash2, Tag } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import useCartStore from '@/store/cartStore';
-import useAuthStore from '@/store/authStore';
-import useOrderStore from '@/store/orderStore';
-import { FIRST_PURCHASE_PROMO } from '@/config/promotions';
 import { calculateOrderPricing } from '@/utils/orderPricing';
 import { getProductImage, handleProductImageError } from '@/utils/imageUtils';
 import { products } from '@/data/products';
@@ -28,13 +25,10 @@ const Cart = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { items, updateQuantity, removeFromCart, getCartTotal, addToCart } = useCartStore();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const fetchFirstPurchaseEligibility = useOrderStore((state) => state.fetchFirstPurchaseEligibility);
-  const [firstPurchaseEligible, setFirstPurchaseEligible] = useState(false);
 
   const itemsTotal = getCartTotal();
   const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
-  const pricing = calculateOrderPricing(itemsTotal, { firstPurchaseEligible, itemCount });
+  const pricing = calculateOrderPricing(itemsTotal, { itemCount });
 
   const addOnProducts = useMemo(() => {
     const cartIds = new Set(items.map((item) => String(getItemId(item))));
@@ -43,7 +37,9 @@ const Cart = () => {
         (product) =>
           product?.price > 0 &&
           product.price <= ADD_ON_MAX_PRICE &&
-          !cartIds.has(String(product.id))
+          !cartIds.has(String(product.id)) &&
+          String(product.name || '').trim().toLowerCase() !== 'test' &&
+          String(product.id) !== '1000'
       )
       .sort((a, b) => addOnScore(b) - addOnScore(a))
       .slice(0, 6);
@@ -56,25 +52,6 @@ const Cart = () => {
       description: `${product.name} added to your order.`,
     });
   };
-
-  useEffect(() => {
-    let active = true;
-
-    const loadEligibility = async () => {
-      if (!isAuthenticated) {
-        if (active) setFirstPurchaseEligible(false);
-        return;
-      }
-
-      const result = await fetchFirstPurchaseEligibility();
-      if (active) setFirstPurchaseEligible(result.eligible);
-    };
-
-    loadEligibility();
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated, fetchFirstPurchaseEligibility]);
 
   if (items.length === 0) {
     return (
@@ -233,27 +210,11 @@ const Cart = () => {
                   <span>Delivery charge</span>
                   <span>{formatINR(pricing.deliveryCharge)}</span>
                 </div>
-                {firstPurchaseEligible && pricing.firstPurchaseDiscount > 0 && (
-                  <div className="flex justify-between gap-4 text-green-700">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Tag size={14} />
-                      First purchase ({FIRST_PURCHASE_PROMO.discountPercent}%)
-                    </span>
-                    <span className="font-bold">-{formatINR(pricing.firstPurchaseDiscount)}</span>
-                  </div>
-                )}
                 <div className="flex justify-between gap-4 border-t border-gray-200 pt-3 font-bold text-gray-900">
                   <span>Total</span>
                   <span className="text-gray-900">{formatINR(pricing.total)}</span>
                 </div>
               </div>
-
-              {firstPurchaseEligible && pricing.firstPurchaseDiscount > 0 && (
-                <p className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs leading-relaxed text-green-800">
-                  Welcome offer applied automatically: {FIRST_PURCHASE_PROMO.discountPercent}% off your first
-                  order (max Rs. {FIRST_PURCHASE_PROMO.maxDiscountRs.toLocaleString('en-IN')}).
-                </p>
-              )}
 
               <button
                 type="button"

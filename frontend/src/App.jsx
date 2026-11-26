@@ -20,6 +20,7 @@ import About from '@/pages/About';
 import Contact from '@/pages/Contact';
 import JoinCommunity from '@/pages/JoinCommunity';
 import WhatsAppButton from '@/components/WhatsAppButton';
+import FloatingCartButton from '@/components/FloatingCartButton';
 import ScrollToTop from '@/components/ScrollToTop';
 import { Toaster } from '@/components/ui/toaster';
 import VideoModal from '@/components/VideoModal';
@@ -82,7 +83,10 @@ function App() {
               </Routes>
             </main>
             <Footer />
-            <WhatsAppButton />
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+              <FloatingCartButton />
+              <WhatsAppButton />
+            </div>
             <Toaster />
             <VideoModal />
           </div>

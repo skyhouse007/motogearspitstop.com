@@ -12,6 +12,7 @@ export const calculateDeliveryChargeByQuantity = (itemCount) => {
 };
 
 export const calculateFirstPurchaseDiscount = (billAmount) => {
+  if (!FIRST_PURCHASE_PROMO.enabled) return 0;
   const bill = Number(billAmount || 0);
   if (bill <= 0) return 0;
   return Math.min(

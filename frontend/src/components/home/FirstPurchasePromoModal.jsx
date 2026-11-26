@@ -54,7 +54,11 @@ const FirstPurchasePromoModal = () => {
   };
 
   const promoVisible =
-    showPromo && (showCouponAfterLogin || !isAuthenticated);
+    FIRST_PURCHASE_PROMO.enabled && showPromo && (showCouponAfterLogin || !isAuthenticated);
+
+  if (!FIRST_PURCHASE_PROMO.enabled) {
+    return null;
+  }
 
   return (
     <>

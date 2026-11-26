@@ -1,4 +1,5 @@
 export const FIRST_PURCHASE_PROMO = {
+  enabled: false,
   discountPercent: 10,
   maxDiscountRs: 500,
   couponCode: 'MGPWELCOME10',

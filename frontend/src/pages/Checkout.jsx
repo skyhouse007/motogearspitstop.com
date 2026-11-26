@@ -207,52 +207,52 @@
 //                 <h2 className="text-xl font-bold text-gray-900 mb-4">Shipping Address</h2>
 //                 <div className="space-y-4">
 //                   <div>
-//                     <Label className="text-gray-700 mb-2 block">Full Name *</Label>
+//                     <Label className="mb-2 block font-bold text-gray-900">Full Name *</Label>
 //                     <input type="text" name="fullName" value={formData.fullName}
 //                       onChange={handleInputChange}
 //                       className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
 //                   </div>
 //                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 //                     <div>
-//                       <Label className="text-gray-700 mb-2 block">Phone *</Label>
+//                       <Label className="mb-2 block font-bold text-gray-900">Phone *</Label>
 //                       <input type="tel" name="phone" value={formData.phone}
 //                         onChange={handleInputChange}
 //                         className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
 //                     </div>
 //                     <div>
-//                       <Label className="text-gray-700 mb-2 block">Email *</Label>
+//                       <Label className="mb-2 block font-bold text-gray-900">Email *</Label>
 //                       <input type="email" name="email" value={formData.email}
 //                         onChange={handleInputChange}
 //                         className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
 //                     </div>
 //                   </div>
 //                   <div>
-//                     <Label className="text-gray-700 mb-2 block">Address Line 1 *</Label>
+//                     <Label className="mb-2 block font-bold text-gray-900">Address Line 1 *</Label>
 //                     <input type="text" name="addressLine1" value={formData.addressLine1}
 //                       onChange={handleInputChange}
 //                       className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
 //                   </div>
 //                   <div>
-//                     <Label className="text-gray-700 mb-2 block">Address Line 2</Label>
+//                     <Label className="mb-2 block font-bold text-gray-900">Address Line 2</Label>
 //                     <input type="text" name="addressLine2" value={formData.addressLine2}
 //                       onChange={handleInputChange}
 //                       className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
 //                   </div>
 //                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 //                     <div>
-//                       <Label className="text-gray-700 mb-2 block">City *</Label>
+//                       <Label className="mb-2 block font-bold text-gray-900">City *</Label>
 //                       <input type="text" name="city" value={formData.city}
 //                         onChange={handleInputChange}
 //                         className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
 //                     </div>
 //                     <div>
-//                       <Label className="text-gray-700 mb-2 block">State *</Label>
+//                       <Label className="mb-2 block font-bold text-gray-900">State *</Label>
 //                       <input type="text" name="state" value={formData.state}
 //                         onChange={handleInputChange}
 //                         className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
 //                     </div>
 //                     <div>
-//                       <Label className="text-gray-700 mb-2 block">Pincode *</Label>
+//                       <Label className="mb-2 block font-bold text-gray-900">Pincode *</Label>
 //                       <input type="text" name="pincode" value={formData.pincode}
 //                         onChange={handleInputChange}
 //                         className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
@@ -394,7 +394,7 @@ import useAuthStore from '@/store/authStore';
 import useOrderStore from '@/store/orderStore';
 import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
-import { FIRST_PURCHASE_PROMO, ONLINE_PAYMENT_DISCOUNT_RS } from '@/config/promotions';
+import { ONLINE_PAYMENT_DISCOUNT_RS } from '@/config/promotions';
 import { calculateOrderPricing, COD_ADVANCE_PERCENTAGE } from '@/utils/orderPricing';
 import { getProductImage, handleProductImageError } from '@/utils/imageUtils';
 import IndianPhoneInput from '@/components/IndianPhoneInput';
@@ -448,14 +448,12 @@ const Checkout = () => {
     createOrder,
     createRazorpayOrder,
     verifyPayment,
-    fetchFirstPurchaseEligibility,
   } = useOrderStore();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [firstPurchaseEligible, setFirstPurchaseEligible] = useState(false);
   const [pincodeLookupLoading, setPincodeLookupLoading] = useState(false);
   const checkoutTracked = useRef(false);
   const checkoutTopRef = useRef(null);
@@ -511,35 +509,14 @@ const Checkout = () => {
     }));
   }, [user]);
 
-  useEffect(() => {
-    let active = true;
-
-    const loadEligibility = async () => {
-      if (!isAuthenticated) {
-        if (active) setFirstPurchaseEligible(false);
-        return;
-      }
-
-      const result = await fetchFirstPurchaseEligibility();
-      if (active) setFirstPurchaseEligible(result.eligible);
-    };
-
-    loadEligibility();
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated, fetchFirstPurchaseEligibility]);
-
   const itemsTotal = getItemsTotal(items);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const pricing = calculateOrderPricing(itemsTotal, {
-    firstPurchaseEligible,
     itemCount,
     paymentMethod: formData.paymentMethod,
   });
   const {
     deliveryCharge,
-    firstPurchaseDiscount,
     onlinePaymentDiscount,
     total,
   } = pricing;
@@ -865,14 +842,14 @@ const Checkout = () => {
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Shipping Address</h2>
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-gray-700 mb-2 block">Full Name *</Label>
+                    <Label className="mb-2 block font-bold text-gray-900">Full Name *</Label>
                     <input type="text" name="fullName" value={formData.fullName}
                       onChange={handleInputChange}
                       className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-gray-700 mb-2 block">Phone *</Label>
+                      <Label className="mb-2 block font-bold text-gray-900">Phone *</Label>
                       <IndianPhoneInput
                         value={formData.phone}
                         onChange={(phone) => setFormData({ ...formData, phone })}
@@ -882,27 +859,27 @@ const Checkout = () => {
                       />
                     </div>
                     <div>
-                      <Label className="text-gray-700 mb-2 block">Email *</Label>
+                      <Label className="mb-2 block font-bold text-gray-900">Email *</Label>
                       <input type="email" name="email" value={formData.email}
                         onChange={handleInputChange}
                         className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
                     </div>
                   </div>
                   <div>
-                    <Label className="text-gray-700 mb-2 block">Address *</Label>
+                    <Label className="mb-2 block font-bold text-gray-900">Address *</Label>
                     <input type="text" name="addressLine1" value={formData.addressLine1}
                       onChange={handleInputChange}
                       className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
                   </div>
                   <div>
-                    <Label className="text-gray-700 mb-2 block">Landmark</Label>
+                    <Label className="mb-2 block font-bold text-gray-900">Landmark</Label>
                     <input type="text" name="addressLine2" value={formData.addressLine2}
                       onChange={handleInputChange}
                       className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label className="text-gray-700 mb-2 block">Pincode *</Label>
+                      <Label className="mb-2 block font-bold text-gray-900">Pincode *</Label>
                       <input
                         type="text"
                         name="pincode"
@@ -921,7 +898,7 @@ const Checkout = () => {
                       )}
                     </div>
                     <div>
-                      <Label className="text-gray-700 mb-2 block">City *</Label>
+                      <Label className="mb-2 block font-bold text-gray-900">City *</Label>
                       <input
                         type="text"
                         name="city"
@@ -932,7 +909,7 @@ const Checkout = () => {
                       />
                     </div>
                     <div>
-                      <Label className="text-gray-700 mb-2 block">State *</Label>
+                      <Label className="mb-2 block font-bold text-gray-900">State *</Label>
                       <input
                         type="text"
                         name="state"
@@ -1177,12 +1154,6 @@ const Checkout = () => {
                   <span>Delivery charge</span>
                   <span>{formatINR(deliveryCharge)}</span>
                 </div>
-                {firstPurchaseEligible && firstPurchaseDiscount > 0 && (
-                  <div className="flex justify-between gap-4 text-green-700">
-                    <span>First purchase ({FIRST_PURCHASE_PROMO.discountPercent}%)</span>
-                    <span className="font-bold">-{formatINR(firstPurchaseDiscount)}</span>
-                  </div>
-                )}
                 {step >= 2 && formData.paymentMethod === 'razorpay' && onlinePaymentDiscount > 0 && (
                   <div className="flex justify-between gap-4 text-green-700">
                     <span>Online payment offer</span>

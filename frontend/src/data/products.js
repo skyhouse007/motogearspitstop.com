@@ -24675,36 +24675,6 @@ const catalogProducts = [
             'Maintenance': 'Washable & Reusable',
         }
     },
-    {
-        id: 1000,
-        name: 'test',
-        price: 5,
-        discount: 10,
-        image: 'https://res.cloudinary.com/k4uklwi4/image/upload/v1786109010/i_imyxes.png',
-        galleryImages: [
-            'https://res.cloudinary.com/k4uklwi4/image/upload/v1786109010/i_imyxes.png',
-            'https://res.cloudinary.com/k4uklwi4/image/upload/v1786109010/i_imyxes.png',
-            'https://res.cloudinary.com/k4uklwi4/image/upload/v1786109010/i_imyxes.png'
-        ],
-        category: 'Performance Parts',
-        subcategory: 'Air Filter',
-        brand: 'K&N',
-        rating: 5,
-        reviews: 892,
-        isNew: false,
-        bikes: [
-            'TVS Apache',
-            'Bajaj Avenger'
-        ],
-        description: 'K&N RC-1060 Universal Cone Air Filter is designed for TVS Apache, Bajaj Avenger, and other compatible motorcycles. It delivers high airflow, enhanced engine performance, and superior filtration with a washable and reusable cone design.',
-        specifications: {
-            'Filter Type': 'Universal Cone Air Filter',
-            'Model Number': 'RC-1060',
-            'Compatible Models': 'TVS Apache & Bajaj Avenger',
-            'Performance': 'High Airflow & Engine Protection',
-            'Maintenance': 'Washable & Reusable',
-        }
-    },
 
     {
         id: 1001,
