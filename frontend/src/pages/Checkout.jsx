@@ -385,17 +385,22 @@
 
 
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check, Minus, Plus } from 'lucide-react';
+import { Check, ChevronLeft, Minus, Plus } from 'lucide-react';
 import useCartStore from '@/store/cartStore';
 import useAuthStore from '@/store/authStore';
 import useOrderStore from '@/store/orderStore';
 import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
 import { ONLINE_PAYMENT_DISCOUNT_RS } from '@/config/promotions';
-import { calculateOrderPricing, COD_ADVANCE_PERCENTAGE } from '@/utils/orderPricing';
+import {
+  calculateDeliveryChargeByQuantity,
+  calculateOrderPricing,
+  COD_ADVANCE_PERCENTAGE,
+} from '@/utils/orderPricing';
+import { calculateCouponDiscount, resolveCouponCode } from '@/utils/couponUtils';
 import { getProductImage, handleProductImageError } from '@/utils/imageUtils';
 import IndianPhoneInput from '@/components/IndianPhoneInput';
 import { toIndianLocalDigits } from '@/utils/phoneUtils';
@@ -415,6 +420,35 @@ const getItemImage = (item) => getProductImage(getItemProduct(item));
 const getItemPrice = (item) => Number(item?.price ?? item?.product?.discountPrice ?? item?.product?.price ?? 0);
 const getItemsTotal = (items) => items.reduce((sum, item) => sum + getItemPrice(item) * item.quantity, 0);
 const formatINR = (value = 0) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+
+function CodPaymentBreakdown({ advanceAmount, leftoverAmount, className = 'mt-4' }) {
+  return (
+    <div className={`w-full ${className}`}>
+      <div className="grid w-full grid-cols-2 overflow-hidden rounded-2xl border border-gray-200">
+        <div className="border-r border-gray-200 px-2 pt-4 text-center">
+          <p className="whitespace-nowrap text-sm font-extrabold uppercase tracking-wide text-gray-900 sm:text-base">
+            Pay now · {COD_ADVANCE_PERCENTAGE}%
+          </p>
+        </div>
+        <div className="px-2 pt-4 text-center">
+          <p className="whitespace-nowrap text-sm font-extrabold uppercase tracking-wide text-gray-900 sm:text-base">
+            Pay on delivery
+          </p>
+        </div>
+        <div className="border-r border-gray-200 px-2 pb-4 pt-2 text-center">
+          <p className="whitespace-nowrap text-[1.65rem] font-extrabold tabular-nums leading-none text-[#e63946]">
+            {formatINR(advanceAmount)}
+          </p>
+        </div>
+        <div className="px-2 pb-4 pt-2 text-center">
+          <p className="whitespace-nowrap text-[1.65rem] font-extrabold tabular-nums leading-none text-gray-900">
+            {formatINR(leftoverAmount)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 const normalizeWhatsAppNumber = (phone) => {
   const digits = String(phone || '').replace(/\D/g, '');
   return digits.length === 10 ? `91${digits}` : digits;
@@ -455,6 +489,25 @@ const Checkout = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [pincodeLookupLoading, setPincodeLookupLoading] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const ADDRESS_FIELD_LABELS = {
+    fullName: 'Full name',
+    phone: 'Phone',
+    email: 'Email',
+    addressLine1: 'Address',
+    city: 'City',
+    state: 'State',
+    pincode: 'Pincode',
+  };
+
+  const inputErrorClass = (name) =>
+    fieldErrors[name]
+      ? 'border-red-500 bg-red-50 focus:border-red-500'
+      : 'border-gray-300 bg-white focus:border-[#e63946]';
   const checkoutTracked = useRef(false);
   const checkoutTopRef = useRef(null);
   const emptyCartRedirect = useRef(false);
@@ -511,15 +564,40 @@ const Checkout = () => {
 
   const itemsTotal = getItemsTotal(items);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const billBeforeDiscount = itemsTotal + calculateDeliveryChargeByQuantity(itemCount);
+  const couponDiscount = useMemo(
+    () => (appliedCoupon ? calculateCouponDiscount(appliedCoupon, billBeforeDiscount) : 0),
+    [appliedCoupon, billBeforeDiscount],
+  );
+
   const pricing = calculateOrderPricing(itemsTotal, {
     itemCount,
     paymentMethod: formData.paymentMethod,
+    couponDiscount,
   });
   const {
     deliveryCharge,
     onlinePaymentDiscount,
     total,
   } = pricing;
+
+  const handleApplyCoupon = () => {
+    const resolved = resolveCouponCode(couponInput);
+    if (!resolved) {
+      setAppliedCoupon(null);
+      setCouponError('Invalid or expired coupon code.');
+      return;
+    }
+    setAppliedCoupon(resolved);
+    setCouponError('');
+    toast({ title: 'Coupon applied', description: `${resolved.code} — ${resolved.label || 'Discount applied'}.` });
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError('');
+  };
   const codAdvanceAmount = total > 0
     ? Math.max(Math.round(total * (COD_ADVANCE_PERCENTAGE / 100)), 1)
     : 0;
@@ -596,16 +674,42 @@ const Checkout = () => {
   }
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: false }));
+    }
+  };
+
+  const clearFieldError = (name) => {
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: false }));
+    }
   };
 
   const validateStep1 = () => {
     const { fullName, phone, email, addressLine1, city, state, pincode } = formData;
-    if (!fullName || !phone || !email || !addressLine1 || !city || !state || !pincode) {
-      toast({ title: 'Missing Information', description: 'Please fill in all address fields', variant: 'destructive' });
+    const required = { fullName, phone, email, addressLine1, city, state, pincode };
+    const missing = Object.entries(required)
+      .filter(([, value]) => !String(value || '').trim())
+      .map(([key]) => key);
+
+    if (missing.length > 0) {
+      const nextErrors = missing.reduce((acc, key) => ({ ...acc, [key]: true }), {});
+      setFieldErrors(nextErrors);
+      const labels = missing.map((key) => ADDRESS_FIELD_LABELS[key] || key).join(', ');
+      toast({
+        title: 'Missing information',
+        description: `Please fill in: ${labels}`,
+        variant: 'destructive',
+      });
       return false;
     }
+
+    setFieldErrors({});
+
     if (toIndianLocalDigits(phone).length < 10) {
+      setFieldErrors({ phone: true });
       toast({
         title: 'Invalid phone number',
         description: 'Please enter a valid 10-digit mobile number',
@@ -614,6 +718,7 @@ const Checkout = () => {
       return false;
     }
     if (normalizePincodeDigits(pincode).length !== 6) {
+      setFieldErrors({ pincode: true });
       toast({
         title: 'Invalid pincode',
         description: 'Please enter a valid 6-digit pincode',
@@ -769,6 +874,7 @@ const Checkout = () => {
       },
       paymentInfo: paymentInfo || {},
       paymentMethod: formData.paymentMethod,
+      couponCode: appliedCoupon?.code,
       paidAmount: Math.round(Number(amountCollected)),
       metaTracking: {
         eventId: purchaseEventId,
@@ -808,13 +914,35 @@ const Checkout = () => {
     await handleRazorpayPayment();
   };
 
+  const handleCheckoutBack = () => {
+    if (step === 1) {
+      navigate('/cart');
+      return;
+    }
+    setStep(step - 1);
+  };
+
+  const checkoutBackLabel =
+    step === 1 ? 'Back to cart' : step === 2 ? 'Back to address' : 'Back to payment';
+
   return (
     <div
       ref={checkoutTopRef}
       className="overflow-anchor-none min-h-screen bg-white px-4 py-6 pb-8"
     >
       <div className="max-w-[1000px] mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+        <div className="mb-8">
+          <button
+            type="button"
+            onClick={handleCheckoutBack}
+            disabled={loading}
+            className="mb-3 inline-flex items-center gap-1 text-sm font-bold text-gray-700 transition-colors hover:text-[#e63946] disabled:pointer-events-none disabled:opacity-50"
+          >
+            <ChevronLeft className="h-5 w-5 shrink-0" aria-hidden />
+            {checkoutBackLabel}
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
+        </div>
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center mb-8">
@@ -833,7 +961,9 @@ const Checkout = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <div className="order-1 lg:order-none lg:col-span-2">
+          <div
+            className={`order-1 lg:order-none ${step === 1 ? 'lg:col-span-2' : 'lg:col-span-3 lg:max-w-2xl lg:mx-auto lg:w-full'}`}
+          >
 
             {/* Step 1 — Shipping */}
             {step === 1 && (
@@ -845,31 +975,43 @@ const Checkout = () => {
                     <Label className="mb-2 block font-bold text-gray-900">Full Name *</Label>
                     <input type="text" name="fullName" value={formData.fullName}
                       onChange={handleInputChange}
-                      className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
+                      className={`w-full text-gray-900 border rounded-lg px-4 py-2 focus:outline-none ${inputErrorClass('fullName')}`}
+                    />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label className="mb-2 block font-bold text-gray-900">Phone *</Label>
                       <IndianPhoneInput
                         value={formData.phone}
-                        onChange={(phone) => setFormData({ ...formData, phone })}
-                        containerClassName="border-gray-300 bg-white"
-                        prefixClassName="border-gray-300 bg-gray-50"
+                        onChange={(phone) => {
+                          setFormData({ ...formData, phone });
+                          clearFieldError('phone');
+                        }}
+                        containerClassName={
+                          fieldErrors.phone
+                            ? 'border-red-500 bg-red-50'
+                            : 'border-gray-300 bg-white'
+                        }
+                        prefixClassName={
+                          fieldErrors.phone ? 'border-red-500 bg-red-100' : 'border-gray-300 bg-gray-50'
+                        }
                         inputClassName="text-gray-900 placeholder:text-gray-500"
                       />
                     </div>
                     <div>
                       <Label className="mb-2 block font-bold text-gray-900">Email *</Label>
-                      <input type="email" name="email" value={formData.email}
-                        onChange={handleInputChange}
-                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
+                    <input type="email" name="email" value={formData.email}
+                      onChange={handleInputChange}
+                      className={`w-full text-gray-900 border rounded-lg px-4 py-2 focus:outline-none ${inputErrorClass('email')}`}
+                    />
                     </div>
                   </div>
                   <div>
                     <Label className="mb-2 block font-bold text-gray-900">Address *</Label>
                     <input type="text" name="addressLine1" value={formData.addressLine1}
                       onChange={handleInputChange}
-                      className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]" />
+                      className={`w-full text-gray-900 border rounded-lg px-4 py-2 focus:outline-none ${inputErrorClass('addressLine1')}`}
+                    />
                   </div>
                   <div>
                     <Label className="mb-2 block font-bold text-gray-900">Landmark</Label>
@@ -890,8 +1032,9 @@ const Checkout = () => {
                         onChange={(e) => {
                           const pincode = normalizePincodeDigits(e.target.value);
                           setFormData((current) => ({ ...current, pincode }));
+                          clearFieldError('pincode');
                         }}
-                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]"
+                        className={`w-full text-gray-900 border rounded-lg px-4 py-2 focus:outline-none ${inputErrorClass('pincode')}`}
                       />
                       {pincodeLookupLoading && (
                         <p className="mt-1 text-xs text-gray-500">Looking up city and state…</p>
@@ -905,7 +1048,7 @@ const Checkout = () => {
                         autoComplete="address-level2"
                         value={formData.city}
                         onChange={handleInputChange}
-                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]"
+                        className={`w-full text-gray-900 border rounded-lg px-4 py-2 focus:outline-none ${inputErrorClass('city')}`}
                       />
                     </div>
                     <div>
@@ -916,18 +1059,11 @@ const Checkout = () => {
                         autoComplete="address-level1"
                         value={formData.state}
                         onChange={handleInputChange}
-                        className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#e63946]"
+                        className={`w-full text-gray-900 border rounded-lg px-4 py-2 focus:outline-none ${inputErrorClass('state')}`}
                       />
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => validateStep1() && setStep(2)}
-                  className="mt-6 w-full rounded-full bg-[#0a0a0a] px-6 py-3 font-bold text-white transition-colors hover:bg-[#e63946]"
-                >
-                  Continue to Payment
-                </button>
               </motion.div>
             )}
 
@@ -983,13 +1119,35 @@ const Checkout = () => {
                   })}
                 </div>
                 {formData.paymentMethod === 'cod' && (
-                  <div className="mt-4 rounded-lg border border-gray-200 bg-transparent p-4 font-bold text-gray-900">
-                    <p className="text-sm">COD booking requires advance payment</p>
-                    <p className="mt-1 text-sm font-medium text-gray-600">
-                      Minimum {COD_ADVANCE_PERCENTAGE}% must be paid now ({formatINR(codAdvanceAmount)}) to confirm
-                      and book this COD order. Pay the remaining {formatINR(codLeftoverAmount)} on delivery — UPI,
-                      card, cash, or any mode you prefer.
-                    </p>
+                  <CodPaymentBreakdown
+                    advanceAmount={codAdvanceAmount}
+                    leftoverAmount={codLeftoverAmount}
+                  />
+                )}
+                {formData.paymentMethod === 'razorpay' && onlinePaymentDiscount > 0 && (
+                  <div className="mt-4 w-full">
+                    <div className="grid w-full grid-cols-2 overflow-hidden rounded-2xl border border-gray-200">
+                      <div className="border-r border-gray-200 px-2 pt-4 text-center">
+                        <p className="whitespace-nowrap text-sm font-extrabold uppercase tracking-wide text-gray-900 sm:text-base">
+                          Extra Rs. {ONLINE_PAYMENT_DISCOUNT_RS} off
+                        </p>
+                      </div>
+                      <div className="px-2 pt-4 text-center">
+                        <p className="whitespace-nowrap text-sm font-extrabold uppercase tracking-wide text-gray-900 sm:text-base">
+                          Pay now
+                        </p>
+                      </div>
+                      <div className="border-r border-gray-200 px-2 pb-4 pt-2 text-center">
+                        <p className="whitespace-nowrap text-[1.65rem] font-extrabold tabular-nums leading-none text-emerald-600">
+                          -{formatINR(onlinePaymentDiscount)}
+                        </p>
+                      </div>
+                      <div className="px-2 pb-4 pt-2 text-center">
+                        <p className="whitespace-nowrap text-[1.65rem] font-extrabold tabular-nums leading-none text-[#e63946]">
+                          {formatINR(total)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
                 <div className="flex gap-4 mt-6">
@@ -1014,14 +1172,35 @@ const Checkout = () => {
                 className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Review Order</h2>
                 <div className="space-y-4 mb-6">
-                  <div>
-                    <h3 className="text-gray-900 font-medium mb-2">Shipping Address</h3>
-                    <p className="text-gray-600 text-sm">
-                      {formData.fullName}<br />
-                      {formData.addressLine1}{formData.addressLine2 && `, ${formData.addressLine2}`}<br />
-                      {formData.city}, {formData.state} - {formData.pincode}<br />
-                      Phone: {formatUserPhone(formData.phone)}
-                    </p>
+                  <div className="w-full">
+                    <div className="mb-2 flex w-full items-center justify-between gap-3">
+                      <h3 className="font-medium text-gray-900">Shipping Address</h3>
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        className="shrink-0 text-sm font-bold text-[#e63946] transition-colors hover:text-[#d62839] hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                    <div className="w-full rounded-lg border border-gray-200 bg-gray-50 p-4">
+                      <p className="w-full text-sm font-bold leading-relaxed text-gray-900">
+                        {formData.fullName}
+                        <br />
+                        {formData.addressLine1}
+                        {formData.addressLine2 ? `, ${formData.addressLine2}` : ''}
+                        <br />
+                        {formData.city}, {formData.state} - {formData.pincode}
+                        <br />
+                        Phone: {formatUserPhone(formData.phone)}
+                        {formData.email ? (
+                          <>
+                            <br />
+                            Email: {formData.email}
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
                   </div>
                   <div>
                     <h3 className="text-gray-900 font-medium mb-2">Payment</h3>
@@ -1033,16 +1212,11 @@ const Checkout = () => {
                           : '—'}
                     </p>
                     {formData.paymentMethod === 'cod' && (
-                      <div className="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                        <div className="rounded-lg bg-green-50 p-3">
-                          <p className="text-gray-500">Pay now</p>
-                          <p className="font-bold text-green-700">{formatINR(codAdvanceAmount)}</p>
-                        </div>
-                        <div className="rounded-lg bg-orange-50 p-3">
-                          <p className="text-gray-500">Leftover on delivery</p>
-                          <p className="font-bold text-orange-700">{formatINR(codLeftoverAmount)}</p>
-                        </div>
-                      </div>
+                      <CodPaymentBreakdown
+                        advanceAmount={codAdvanceAmount}
+                        leftoverAmount={codLeftoverAmount}
+                        className="mt-3"
+                      />
                     )}
                   </div>
                   <div>
@@ -1074,13 +1248,9 @@ const Checkout = () => {
                     After completing payment, please wait on this page. Do not close, refresh, or go back until your order confirmation appears.
                   </p>
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                  <button onClick={() => setStep(2)}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 px-6 py-3 rounded-lg font-bold transition-colors">
-                    Back
-                  </button>
+                <div>
                   <button onClick={handlePlaceOrder} disabled={loading}
-                    className="flex-1 bg-[#e63946] hover:bg-[#d62839] text-white px-6 py-3 rounded-lg font-bold transition-colors disabled:opacity-50">
+                    className="w-full bg-[#e63946] hover:bg-[#d62839] text-white px-6 py-3 rounded-lg font-bold transition-colors disabled:opacity-50">
                     {loading
                       ? 'Confirming payment... Please wait'
                       : (formData.paymentMethod === 'cod' ? `Pay ${formatINR(codAdvanceAmount)} & Place Order` : 'Pay & Place Order')}
@@ -1095,7 +1265,8 @@ const Checkout = () => {
             )}
           </div>
 
-          {/* Order Summary */}
+          {/* Order Summary — step 1 only (Continue to Payment lives here) */}
+          {step === 1 && (
           <div className="order-2 lg:order-none lg:col-span-1">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm lg:sticky lg:top-4">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
@@ -1154,46 +1325,68 @@ const Checkout = () => {
                   <span>Delivery charge</span>
                   <span>{formatINR(deliveryCharge)}</span>
                 </div>
-                {step >= 2 && formData.paymentMethod === 'razorpay' && onlinePaymentDiscount > 0 && (
+
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="mb-2 text-sm font-bold text-gray-900">Coupon code</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter code"
+                      disabled={Boolean(appliedCoupon)}
+                      className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold uppercase text-gray-900 outline-none focus:border-[#e63946] disabled:bg-gray-50"
+                    />
+                    {appliedCoupon ? (
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-bold text-gray-800 hover:border-[#e63946] hover:text-[#e63946]"
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        className="shrink-0 rounded-lg bg-[#0a0a0a] px-4 py-2 text-sm font-bold text-white hover:bg-[#e63946]"
+                      >
+                        Apply
+                      </button>
+                    )}
+                  </div>
+                  {appliedCoupon && (
+                    <p className="mt-2 text-xs font-semibold text-green-700">
+                      {appliedCoupon.code} applied
+                      {appliedCoupon.label ? ` · ${appliedCoupon.label}` : ''}
+                    </p>
+                  )}
+                  {couponError && (
+                    <p className="mt-2 text-xs font-semibold text-red-600">{couponError}</p>
+                  )}
+                </div>
+
+                {couponDiscount > 0 && (
                   <div className="flex justify-between gap-4 text-green-700">
-                    <span>Online payment offer</span>
-                    <span className="font-bold">-{formatINR(onlinePaymentDiscount)}</span>
+                    <span>Coupon ({appliedCoupon?.code})</span>
+                    <span className="font-bold">-{formatINR(couponDiscount)}</span>
                   </div>
                 )}
-                {step >= 2 && formData.paymentMethod === 'cod' ? (
-                  <div className="rounded-xl border border-[#FDE047] bg-white py-1 pl-3 pr-1 sm:pl-4 sm:pr-2">
-                    <div className="divide-y divide-[#FDE047]/50">
-                      <div className="flex items-center justify-between gap-2 py-3 text-lg font-bold text-[#0a0a0a]">
-                        <span className="min-w-0 flex-1 leading-snug pr-2">
-                          Advance now ({COD_ADVANCE_PERCENTAGE}%)
-                        </span>
-                        <span className="shrink-0 whitespace-nowrap tabular-nums text-right">
-                          {formatINR(codAdvanceAmount)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 py-3 text-lg font-bold text-[#0a0a0a]">
-                        <span className="min-w-0 flex-1 leading-snug pr-2">Leftover on delivery</span>
-                        <span className="shrink-0 whitespace-nowrap tabular-nums text-right">
-                          {formatINR(codLeftoverAmount)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 py-3 text-lg font-bold text-[#0a0a0a]">
-                        <span className="min-w-0 flex-1 leading-snug pr-2">Total</span>
-                        <span className="shrink-0 whitespace-nowrap tabular-nums text-right">
-                          {formatINR(total)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-3 text-lg font-bold text-gray-900">
-                    <span className="shrink-0 whitespace-nowrap">Total</span>
-                    <span className="shrink-0 whitespace-nowrap tabular-nums">{formatINR(total)}</span>
-                  </div>
-                )}
+                <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-3 text-lg font-bold text-gray-900">
+                  <span className="shrink-0 whitespace-nowrap">Total</span>
+                  <span className="shrink-0 whitespace-nowrap tabular-nums">{formatINR(total)}</span>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => validateStep1() && setStep(2)}
+                className="w-full rounded-full bg-[#0a0a0a] px-6 py-3 font-bold text-white transition-colors hover:bg-[#e63946]"
+              >
+                Continue to Payment
+              </button>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

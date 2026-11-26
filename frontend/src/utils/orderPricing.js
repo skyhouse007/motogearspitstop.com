@@ -29,15 +29,20 @@ export const calculateOnlinePaymentDiscount = (paymentMethod, amountAfterOtherDi
 
 export const calculateOrderPricing = (
   itemsTotal,
-  { firstPurchaseEligible = false, itemCount = 0, paymentMethod = 'cod' } = {},
+  { firstPurchaseEligible = false, itemCount = 0, paymentMethod = 'cod', couponDiscount = 0 } = {},
 ) => {
   const items = Number(itemsTotal || 0);
   const deliveryCharge = calculateDeliveryChargeByQuantity(itemCount);
   const billBeforeDiscount = items + deliveryCharge;
+  const normalizedCouponDiscount = Math.min(
+    Math.max(Number(couponDiscount) || 0, 0),
+    billBeforeDiscount,
+  );
+  const afterCoupon = Math.max(billBeforeDiscount - normalizedCouponDiscount, 0);
   const firstPurchaseDiscount = firstPurchaseEligible
-    ? calculateFirstPurchaseDiscount(billBeforeDiscount)
+    ? calculateFirstPurchaseDiscount(afterCoupon)
     : 0;
-  const afterFirstPurchase = Math.max(billBeforeDiscount - firstPurchaseDiscount, 0);
+  const afterFirstPurchase = Math.max(afterCoupon - firstPurchaseDiscount, 0);
   const onlinePaymentDiscount = calculateOnlinePaymentDiscount(paymentMethod, afterFirstPurchase);
   const total = Math.max(afterFirstPurchase - onlinePaymentDiscount, 0);
 
@@ -45,6 +50,7 @@ export const calculateOrderPricing = (
     itemsTotal: items,
     deliveryCharge,
     billBeforeDiscount,
+    couponDiscount: normalizedCouponDiscount,
     firstPurchaseDiscount,
     onlinePaymentDiscount,
     total,

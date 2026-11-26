@@ -13,6 +13,7 @@ import {
 import { sendMetaPurchaseFromOrder } from '../utils/metaCapi.js';
 import { calculateDeliveryChargeByQuantity } from '../utils/deliveryPricing.js';
 import { calculateOnlinePaymentDiscount } from '../utils/onlinePaymentPromo.js';
+import { calculateCouponDiscount, resolveCouponCode } from '../utils/storeCoupon.js';
 
 const escapeHtml = (value = '') => String(value)
   .replace(/&/g, '&amp;')
@@ -162,6 +163,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     items: clientItems = [],
     paidAmount: paidAmountFromClient,
     metaTracking = {},
+    couponCode,
   } = req.body;
 
   const userId = req.user?._id;
@@ -206,12 +208,22 @@ export const createOrder = asyncHandler(async (req, res) => {
   const shippingPrice = calculateDeliveryChargeByQuantity(cartItemCount);
   const billBeforeDiscount = itemsPrice + shippingPrice;
 
-  let firstPurchaseDiscount = 0;
-  if (userId && await isFirstPurchaseEligible(userId)) {
-    firstPurchaseDiscount = calculateFirstPurchaseDiscount(billBeforeDiscount);
+  let couponDiscount = 0;
+  let storedCouponCode;
+  const coupon = resolveCouponCode(couponCode);
+  if (coupon) {
+    couponDiscount = calculateCouponDiscount(coupon, billBeforeDiscount);
+    storedCouponCode = coupon.code;
   }
 
-  const afterFirstPurchase = Math.max(billBeforeDiscount - firstPurchaseDiscount, 0);
+  const afterCoupon = Math.max(billBeforeDiscount - couponDiscount, 0);
+
+  let firstPurchaseDiscount = 0;
+  if (userId && await isFirstPurchaseEligible(userId)) {
+    firstPurchaseDiscount = calculateFirstPurchaseDiscount(afterCoupon);
+  }
+
+  const afterFirstPurchase = Math.max(afterCoupon - firstPurchaseDiscount, 0);
   const onlinePaymentDiscount = calculateOnlinePaymentDiscount(paymentMethod, afterFirstPurchase);
   const totalPrice = Math.max(afterFirstPurchase - onlinePaymentDiscount, 0);
   let paymentBreakup = calculatePaymentBreakup(paymentMethod, totalPrice);
@@ -254,6 +266,8 @@ export const createOrder = asyncHandler(async (req, res) => {
     paymentStatus: paymentBreakup.paymentStatus,
     itemsPrice,
     shippingPrice,
+    couponCode: storedCouponCode,
+    couponDiscount,
     firstPurchaseDiscount,
     onlinePaymentDiscount,
     totalPrice,

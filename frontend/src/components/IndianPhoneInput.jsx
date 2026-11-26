@@ -16,12 +16,9 @@ export default function IndianPhoneInput({
       className={`flex overflow-hidden rounded-lg border focus-within:border-[#e63946] ${containerClassName}`}
     >
       <div
-        className={`flex shrink-0 items-center gap-1.5 border-r px-3 py-2.5 text-sm font-semibold text-[#0a0a0a] ${prefixClassName}`}
+        className={`flex shrink-0 items-center border-r px-3 py-2.5 text-sm font-semibold text-[#0a0a0a] ${prefixClassName}`}
         aria-hidden
       >
-        <span className="text-[10px] font-bold uppercase tracking-wide text-[#0a0a0a]/65">
-          IND
-        </span>
         <span>+91</span>
       </div>
       <input
