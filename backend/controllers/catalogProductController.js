@@ -97,27 +97,44 @@ export const upsertCatalogProduct = asyncHandler(async (req, res) => {
   }
 
   if (hasGalleryPayload) {
+    // Admin sent an explicit keep list — treat it as the managed media set so
+    // deletes/reorders stick and static products.js URLs are not re-merged.
     const keptImages = parseGalleryKeepList(req.body.keepGalleryImages).filter((url) => !isVideoUrl(url));
-    const keptVideos = parseGalleryKeepList(req.body.keepVideos);
-    const keptImageSet = new Set([
-      ...(imageCover && !isVideoUrl(imageCover) ? [imageCover] : []),
-      ...keptImages,
-    ]);
-    const keptVideoSet = new Set(keptVideos);
+    const keptVideos = parseGalleryKeepList(req.body.keepVideos).filter(Boolean);
 
-    const priorAdditional = existing?.additionalGalleryImages || [];
-    let additionalGalleryImages = [...priorAdditional, ...newImageUrls];
-    additionalGalleryImages = [...new Set(additionalGalleryImages)].filter(
-      (url) => !isVideoUrl(url) && (keptImageSet.has(url) || newImageUrls.includes(url)),
-    );
-    payload.additionalGalleryImages = additionalGalleryImages;
+    const orderedImages = [];
+    const seenImages = new Set();
+    const pushImage = (url) => {
+      if (!url || isVideoUrl(url) || seenImages.has(url)) return;
+      seenImages.add(url);
+      orderedImages.push(url);
+    };
 
-    const priorVideos = existing?.additionalVideos || [];
-    let additionalVideos = [...priorVideos, ...newVideoUrls];
-    additionalVideos = [...new Set(additionalVideos)].filter(
-      (url) => keptVideoSet.has(url) || newVideoUrls.includes(url),
-    );
-    payload.additionalVideos = additionalVideos;
+    if (imageCover && keptImages.includes(imageCover)) {
+      pushImage(imageCover);
+    }
+    keptImages.forEach(pushImage);
+    newImageUrls.forEach(pushImage);
+
+    const primary = orderedImages[0] || '';
+    payload.image = primary;
+    payload.galleryImages = orderedImages.filter((url) => url !== primary);
+    // Authoritative ordered list — merge uses this and ignores products.js images.
+    payload.managedImages = orderedImages;
+    // Clear legacy additive list so deleted URLs cannot come back on merge.
+    payload.additionalGalleryImages = [];
+    payload.mediaManaged = true;
+
+    const orderedVideos = [];
+    const seenVideos = new Set();
+    const pushVideo = (url) => {
+      if (!url || seenVideos.has(url)) return;
+      seenVideos.add(url);
+      orderedVideos.push(url);
+    };
+    keptVideos.forEach(pushVideo);
+    newVideoUrls.forEach(pushVideo);
+    payload.additionalVideos = orderedVideos;
   } else {
     if (newImageUrls.length > 0) {
       payload.additionalGalleryImages = [

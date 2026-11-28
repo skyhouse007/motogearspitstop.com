@@ -7,8 +7,10 @@ const useCatalogOverrideStore = create((set, get) => ({
   loaded: false,
   loading: false,
 
-  fetchOverrides: async () => {
-    if (get().loaded || get().loading) return;
+  fetchOverrides: async (options = {}) => {
+    const force = Boolean(options?.force);
+    if (!force && (get().loaded || get().loading)) return;
+    if (get().loading) return;
     set({ loading: true });
     try {
       const res = await api.get('/catalog/overrides');

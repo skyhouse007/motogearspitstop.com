@@ -113,7 +113,7 @@ export default function AdminProducts() {
         product={editProduct}
         open={editOpen}
         onOpenChange={setEditOpen}
-        onSaved={() => fetchOverrides()}
+        onSaved={() => fetchOverrides({ force: true })}
       />
 
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">

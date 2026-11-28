@@ -33,30 +33,52 @@ export function mergeCatalogProduct(base, override) {
     orderedUrls.push(url);
   };
 
-  getProductImageCandidates(base).forEach(addUrl);
+  if (override.mediaManaged) {
+    // Admin-managed media only — never re-add static catalog or stale additional URLs.
+    if (Array.isArray(override.managedImages)) {
+      override.managedImages.filter((url) => url && !isVideoUrl(url)).forEach(addUrl);
+    } else {
+      if (override.image && !isVideoUrl(override.image)) {
+        addUrl(override.image);
+      }
+      if (Array.isArray(override.galleryImages)) {
+        override.galleryImages.filter((url) => !isVideoUrl(url)).forEach(addUrl);
+      }
+    }
+  } else {
+    getProductImageCandidates(base).forEach(addUrl);
 
-  if (Array.isArray(override.additionalGalleryImages)) {
-    override.additionalGalleryImages.forEach(addUrl);
+    if (Array.isArray(override.additionalGalleryImages)) {
+      override.additionalGalleryImages.forEach(addUrl);
+    }
+
+    if (Array.isArray(override.galleryImages)) {
+      override.galleryImages.filter((url) => !isVideoUrl(url)).forEach(addUrl);
+    }
+
+    if (override.image && !isVideoUrl(override.image)) {
+      addUrl(override.image);
+    }
   }
 
-  if (Array.isArray(override.galleryImages)) {
-    override.galleryImages.filter((url) => !isVideoUrl(url)).forEach(addUrl);
-  }
+  const primary = override.mediaManaged
+    ? (orderedUrls[0] || '')
+    : (override.image && !isVideoUrl(override.image) ? override.image : null)
+      || base.image
+      || orderedUrls[0]
+      || '';
 
-  if (override.image && !isVideoUrl(override.image)) {
-    addUrl(override.image);
-  }
-
-  const primary = (override.image && !isVideoUrl(override.image) ? override.image : null)
-    || base.image
-    || orderedUrls[0]
-    || '';
-
-  if (primary && !isVideoUrl(primary)) {
+  if (override.mediaManaged) {
+    merged.image = primary || '';
+  } else if (primary && !isVideoUrl(primary)) {
     merged.image = primary;
   }
 
+  // Keep gallery order: primary first in candidates, then remaining in managed/base order.
   merged.galleryImages = orderedUrls.filter((url) => url && url !== merged.image);
+  if (!merged.image) {
+    delete merged.image;
+  }
 
   const productVideos = [];
   const addVideo = (url) => {
@@ -64,9 +86,15 @@ export function mergeCatalogProduct(base, override) {
     productVideos.push(url);
   };
 
-  getProductVideos(base).forEach(addVideo);
-  if (Array.isArray(override.additionalVideos)) {
-    override.additionalVideos.forEach(addVideo);
+  if (override.mediaManaged) {
+    if (Array.isArray(override.additionalVideos)) {
+      override.additionalVideos.forEach(addVideo);
+    }
+  } else {
+    getProductVideos(base).forEach(addVideo);
+    if (Array.isArray(override.additionalVideos)) {
+      override.additionalVideos.forEach(addVideo);
+    }
   }
 
   merged.productVideos = productVideos;

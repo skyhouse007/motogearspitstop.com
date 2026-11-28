@@ -30,6 +30,13 @@ const catalogProductSchema = new mongoose.Schema(
     stock: Number,
     image: String,
     galleryImages: [String],
+    /**
+     * When true, managedImages (or image + galleryImages) + additionalVideos are the
+     * source of truth and static catalog media from products.js is not re-merged.
+     */
+    mediaManaged: { type: Boolean, default: false },
+    /** Full ordered photo list when mediaManaged (cover first). */
+    managedImages: [String],
     /** New admin uploads only — merged on top of products.js images on the storefront */
     additionalGalleryImages: [String],
     additionalVideos: [String],
